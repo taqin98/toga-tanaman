@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>TOGA RT 09</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
@@ -12,13 +15,13 @@
       <div class="logo">🌿</div>
       <div>
         <div class="title">TOGA RT 09</div>
-        <div class="subtitle">Scan QR untuk info tanaman</div>
+        <div class="subtitle">Scan QR untuk info tanaman obat keluarga</div>
       </div>
     </div>
   </header>
 
   <main class="container">
-    <section id="stateLoading" class="card">
+    <section id="stateLoading" class="card reveal">
       <div class="skeleton-img"></div>
       <div class="skeleton-line w60"></div>
       <div class="skeleton-line w40"></div>
@@ -26,18 +29,35 @@
       <div class="skeleton-line w80"></div>
     </section>
 
-    <section id="stateError" class="card hidden">
+    <section id="stateError" class="card hidden reveal">
       <h2>Tanaman tidak ditemukan</h2>
       <p>Cek kembali QR Code atau parameter <code>?id=...</code>.</p>
       <a class="btn" href="./">Lihat daftar tanaman</a>
     </section>
 
-    <section id="stateList" class="hidden">
-      <h2 class="section-title">Daftar Tanaman</h2>
+    <section id="stateList" class="hidden reveal">
+      <div class="list-head">
+        <h2 class="section-title">Daftar Tanaman</h2>
+        <p id="listCount" class="list-count"></p>
+      </div>
+
+      <div class="search-wrap">
+        <input id="searchInput" class="search-input" type="search" placeholder="Cari nama, latin, atau jenis..." autocomplete="off" />
+      </div>
+
+      <div class="toolbar">
+        <div id="jenisFilters" class="filters" aria-label="Filter jenis tanaman"></div>
+        <div class="view-toggle" role="group" aria-label="Mode tampilan daftar">
+          <button id="viewCard" class="toggle-btn is-active" type="button">Grid</button>
+          <button id="viewCompact" class="toggle-btn" type="button">Compact</button>
+        </div>
+      </div>
+
       <div id="listWrap" class="grid"></div>
+      <p id="listEmpty" class="empty hidden">Tidak ada tanaman yang cocok dengan pencarian.</p>
     </section>
 
-    <section id="stateDetail" class="hidden">
+    <section id="stateDetail" class="hidden reveal">
       <article class="card">
         <img id="img" class="hero" alt="Foto tanaman" />
         <div class="pad">

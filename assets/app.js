@@ -2,6 +2,11 @@ const API_URL =
   "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
 const LOCAL_DATA_URL = "data/plants.json";
 const FETCH_TIMEOUT_MS = 12000;
+const LIST_STATE = {
+  query: "",
+  jenis: "all",
+  view: "grid",
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -14,7 +19,6 @@ function toList(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
 
   if (typeof value === "string") {
-    // Support: newline, ;, or | from spreadsheet
     return value
       .split(/\r?\n|;|\|/)
       .map((x) => x.trim())
@@ -43,16 +47,12 @@ function normalizePlant(raw) {
 }
 
 function normalizePlantList(data) {
-  // mode=list biasanya return array
-  // full dataset bisa return object map {id: {...}}
   if (Array.isArray(data)) return data.map(normalizePlant).filter(Boolean);
 
-  // kalau object map: ambil values()
   if (data && typeof data === "object") {
     return Object.values(data).map(normalizePlant).filter(Boolean);
   }
 
-  // support struktur {data:[...]} jika suatu saat kamu ubah API
   const maybeArr = Array.isArray(data?.data) ? data.data : [];
   return maybeArr.map(normalizePlant).filter(Boolean);
 }
@@ -70,7 +70,6 @@ async function fetchRemoteJSON(url, timeoutMs = FETCH_TIMEOUT_MS) {
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    // Kalau server balas bukan JSON valid, ini akan throw dan masuk fallback
     return await res.json();
   } finally {
     clearTimeout(timer);
@@ -86,12 +85,10 @@ async function fetchLocalPlants() {
 
 async function loadPlants() {
   try {
-    // Remote list
     const remote = await fetchRemoteJSON(`${API_URL}?mode=list`);
     const normalized = normalizePlantList(remote);
     if (normalized.length > 0) return normalized;
   } catch (err) {
-    // Kena CORS biasanya errornya TypeError: Failed to fetch
     console.warn("Remote list gagal, fallback lokal:", err);
   }
 
@@ -122,10 +119,17 @@ function setList(el, items) {
 }
 
 function show(id) {
-  ["stateLoading", "stateError", "stateList", "stateDetail"].forEach((x) =>
-    $(x).classList.add("hidden")
-  );
-  $(id).classList.remove("hidden");
+  ["stateLoading", "stateError", "stateList", "stateDetail"].forEach((x) => {
+    const el = $(x);
+    el.classList.add("hidden");
+    el.classList.remove("state-enter");
+  });
+
+  const target = $(id);
+  target.classList.remove("hidden");
+  // Restart animation each state transition.
+  void target.offsetWidth;
+  target.classList.add("state-enter");
 }
 
 function makeListCard(item) {
@@ -152,6 +156,113 @@ function makeListCard(item) {
   a.appendChild(wrap);
 
   return a;
+}
+
+function renderList(items) {
+  const listWrap = $("listWrap");
+  const listCount = $("listCount");
+  const listEmpty = $("listEmpty");
+  const compactMode = LIST_STATE.view === "compact";
+
+  listWrap.innerHTML = "";
+  listWrap.classList.toggle("compact", compactMode);
+
+  items.forEach((item, index) => {
+    const card = makeListCard(item);
+    card.style.animation = "fadeUp 0.35s ease both";
+    card.style.animationDelay = `${Math.min(index * 45, 320)}ms`;
+    listWrap.appendChild(card);
+  });
+
+  listCount.textContent = `${items.length} tanaman`;
+  listEmpty.classList.toggle("hidden", items.length > 0);
+}
+
+function updateViewToggle() {
+  $("viewCard").classList.toggle("is-active", LIST_STATE.view === "grid");
+  $("viewCompact").classList.toggle("is-active", LIST_STATE.view === "compact");
+}
+
+function getJenisOptions(plants) {
+  const set = new Set();
+  plants.forEach((item) => {
+    const val = String(item.jenis || "").trim();
+    if (val) set.add(val);
+  });
+  return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b, "id"))];
+}
+
+function renderJenisFilters(options) {
+  const wrap = $("jenisFilters");
+  wrap.innerHTML = "";
+
+  options.forEach((opt) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "filter-chip";
+    btn.dataset.jenis = opt;
+    btn.textContent = opt === "all" ? "Semua" : opt;
+    btn.classList.toggle("is-active", LIST_STATE.jenis === opt);
+    wrap.appendChild(btn);
+  });
+}
+
+function getFilteredPlants(plants) {
+  return plants.filter((item) => {
+    const byJenis =
+      LIST_STATE.jenis === "all" ||
+      String(item.jenis || "").toLowerCase() === LIST_STATE.jenis.toLowerCase();
+
+    if (!byJenis) return false;
+
+    const q = LIST_STATE.query.trim().toLowerCase();
+    if (!q) return true;
+
+    const haystack = `${item.nama} ${item.nama_latin} ${item.jenis}`.toLowerCase();
+    return haystack.includes(q);
+  });
+}
+
+function setupListInteractions(plants) {
+  const input = $("searchInput");
+  const jenisWrap = $("jenisFilters");
+  const viewCard = $("viewCard");
+  const viewCompact = $("viewCompact");
+  const jenisOptions = getJenisOptions(plants);
+
+  renderJenisFilters(jenisOptions);
+  updateViewToggle();
+
+  const applyFilter = () => {
+    renderList(getFilteredPlants(plants));
+  };
+
+  input.addEventListener("input", () => {
+    LIST_STATE.query = input.value;
+    applyFilter();
+  });
+
+  jenisWrap.addEventListener("click", (event) => {
+    const btn = event.target.closest("button[data-jenis]");
+    if (!btn) return;
+    LIST_STATE.jenis = btn.dataset.jenis || "all";
+    renderJenisFilters(jenisOptions);
+    applyFilter();
+  });
+
+  viewCard.addEventListener("click", () => {
+    LIST_STATE.view = "grid";
+    updateViewToggle();
+    applyFilter();
+  });
+
+  viewCompact.addEventListener("click", () => {
+    LIST_STATE.view = "compact";
+    updateViewToggle();
+    applyFilter();
+  });
+
+  applyFilter();
 }
 
 function renderDetail(plant) {
@@ -195,11 +306,9 @@ async function main() {
     const id = getParam("id");
 
     if (!id) {
-      $("listWrap").innerHTML = "";
-      plants.forEach((item) => $("listWrap").appendChild(makeListCard(item)));
-
       if (plants.length === 0) throw new Error("Data tanaman kosong");
 
+      setupListInteractions(plants);
       show("stateList");
       return;
     }
