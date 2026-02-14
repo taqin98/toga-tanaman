@@ -8,9 +8,20 @@ function getParam(name){
 }
 
 async function fetchJSON(url){
-  const res = await fetch(url, { cache: "no-store" });
-  if(!res.ok) throw new Error("Fetch gagal");
-  return await res.json();
+  return new Promise((resolve, reject) => {
+    const cbName = "cb_" + Math.random().toString(36).substring(2);
+
+    window[cbName] = (data) => {
+      resolve(data);
+      delete window[cbName];
+      script.remove();
+    };
+
+    const script = document.createElement("script");
+    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cbName;
+    script.onerror = () => reject("Gagal load JSONP");
+    document.body.appendChild(script);
+  });
 }
 
 function setList(el, items){
