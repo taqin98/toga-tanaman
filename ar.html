@@ -49,14 +49,63 @@
         border: 1px solid rgba(255, 255, 255, 0.25);
         display: none;
       }
+      .debug-panel {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 76px;
+        z-index: 20;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 10px;
+        color: #fff;
+        display: none;
+      }
+      .debug-title {
+        font-size: 12px;
+        font-weight: 700;
+        margin: 0 0 8px;
+        opacity: 0.9;
+      }
+      .debug-row {
+        display: flex;
+        gap: 8px;
+      }
+      .debug-select,
+      .debug-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+      .debug-select {
+        flex: 1;
+      }
+      .debug-btn {
+        font-weight: 700;
+      }
     </style>
   </head>
 
   <body>
-    <div class="hud" id="hud">AR TOGA • Arahkan kamera ke QR tanaman</div>
+    <div class="hud" id="hud">AR TOGA • Arahkan kamera ke marker pattern</div>
     <a class="btn" id="btnDetail" href="#" target="_blank" rel="noopener"
       >Detail tanaman</a
     >
+    <div class="debug-panel" id="debugPanel">
+      <p class="debug-title">DEBUG MODE • Simulasi marker</p>
+      <div class="debug-row">
+        <select id="debugSelect" class="debug-select"></select>
+      </div>
+      <div class="debug-row" style="margin-top: 8px">
+        <button id="debugFound" class="debug-btn" type="button">Found</button>
+        <button id="debugLost" class="debug-btn" type="button">Lost</button>
+        <button id="debugReset" class="debug-btn" type="button">Reset</button>
+      </div>
+    </div>
 
     <a-scene
       embedded
@@ -73,10 +122,23 @@
     <script>
       const API_URL =
         "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+      const LOCAL_DATA_URL = "./data/plants.json";
+      const FETCH_TIMEOUT_MS = 12000;
+      const LOST_DEBOUNCE_MS = 350;
+      const DEBUG_MODE =
+        new URLSearchParams(window.location.search).get("debug") === "1";
 
       const hud = document.getElementById("hud");
       const btn = document.getElementById("btnDetail");
       const root = document.getElementById("root");
+      const debugPanel = document.getElementById("debugPanel");
+      const debugSelect = document.getElementById("debugSelect");
+      const debugFoundBtn = document.getElementById("debugFound");
+      const debugLostBtn = document.getElementById("debugLost");
+      const debugResetBtn = document.getElementById("debugReset");
+      const activeMarkers = new Map();
+      const lostTimers = new Map();
+      const plantById = new Map();
 
       function firstBullets(arr, n = 3) {
         if (!Array.isArray(arr)) return "";
@@ -91,91 +153,187 @@
       }
 
       async function fetchJSON(url) {
-        const res = await fetch(url, { cache: "no-store" });
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+        const res = await fetch(url, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
         if (!res.ok) throw new Error("Fetch gagal");
         return await res.json();
       }
 
-    function makeMarker(plant){
-  const id = safeStr(plant.id).trim();
-  if(!id) return null;
+      function clearLostTimer(id) {
+        const timer = lostTimers.get(id);
+        if (!timer) return;
+        clearTimeout(timer);
+        lostTimers.delete(id);
+      }
 
-  const nama = safeStr(plant.nama || id);
-  const gambar = safeStr(plant.gambar || "");
-  const manfaat = plant.manfaat || [];
-  const detailUrl = `./?id=${encodeURIComponent(id)}`;
+      function updateActiveUI() {
+        const top = activeMarkers.values().next().value;
+        if (!top) {
+          hud.textContent = "AR TOGA • Arahkan kamera ke marker pattern";
+          btn.style.display = "none";
+          btn.href = "#";
+          btn.textContent = "Detail tanaman";
+          return;
+        }
 
-  const marker = document.createElement("a-marker");
-  marker.setAttribute("type", "pattern");
-  marker.setAttribute("url", `markers/${encodeURIComponent(id)}.patt`);
-  marker.setAttribute("id", `m_${id}`);
+        hud.textContent = `Marker terdeteksi: ${top.nama}`;
+        btn.href = top.detailUrl;
+        btn.textContent = `Detail ${top.nama}`;
+        btn.style.display = "block";
+      }
 
-  // smoothing lebih kuat
-  marker.setAttribute("smooth", "true");
-  marker.setAttribute("smoothCount", "20");
-  marker.setAttribute("smoothTolerance", "0.01");
-  marker.setAttribute("smoothThreshold", "5");
+      function setMarkerFound(id, nama, detailUrl) {
+        clearLostTimer(id);
+        activeMarkers.set(id, { nama, detailUrl });
+        updateActiveUI();
+      }
 
-  // ===== WRAPPER ENTITY (biar stabil) =====
-  const wrapper = document.createElement("a-entity");
-  wrapper.setAttribute("position", "0 0.5 0");
+      function setMarkerLost(id) {
+        clearLostTimer(id);
+        const timer = setTimeout(() => {
+          activeMarkers.delete(id);
+          lostTimers.delete(id);
+          updateActiveUI();
+        }, LOST_DEBOUNCE_MS);
+        lostTimers.set(id, timer);
+      }
 
-  // background panel (lebih kecil)
-  const panel = document.createElement("a-plane");
-  panel.setAttribute("width", "1.8");
-  panel.setAttribute("height", "1.0");
-  panel.setAttribute("material", "color:#000; opacity:0.55");
-  wrapper.appendChild(panel);
+      function makeMarker(plant) {
+        const id = safeStr(plant.id).trim();
+        if (!id) return null;
 
-  // image (dipusatkan)
-  const img = document.createElement("a-image");
-  img.setAttribute("position", "-0.45 0 0.01");
-  img.setAttribute("width", "0.7");
-  img.setAttribute("height", "0.7");
-  img.setAttribute("src", gambar || "https://via.placeholder.com/300");
-  wrapper.appendChild(img);
+        const nama = safeStr(plant.nama || id);
+        const gambar = safeStr(plant.gambar || "");
+        const manfaat = plant.manfaat || [];
+        const detailUrl = `./?id=${encodeURIComponent(id)}`;
 
-  // name
-  const txtName = document.createElement("a-text");
-  txtName.setAttribute("position", "0.35 0.25 0.02");
-  txtName.setAttribute("value", nama.toUpperCase());
-  txtName.setAttribute("width", "1.4");
-  txtName.setAttribute("align", "left");
-  txtName.setAttribute("color", "#FFFFFF");
-  wrapper.appendChild(txtName);
+        // <a-marker type="pattern" url="markers/<id>.patt">
+        const marker = document.createElement("a-marker");
+        marker.setAttribute("type", "pattern");
+        marker.setAttribute("url", `markers/${encodeURIComponent(id)}.patt`);
+        marker.setAttribute("id", `m_${id}`);
+        marker.setAttribute("smooth", "true");
+        marker.setAttribute("smoothCount", "10");
+        marker.setAttribute("smoothTolerance", "0.01");
+        marker.setAttribute("smoothThreshold", "5");
 
-  // info
-  const txtInfo = document.createElement("a-text");
-  txtInfo.setAttribute("position", "0.35 -0.15 0.02");
-  txtInfo.setAttribute("value", firstBullets(manfaat, 2));
-  txtInfo.setAttribute("width", "1.4");
-  txtInfo.setAttribute("align", "left");
-  txtInfo.setAttribute("color", "#E8F5FF");
-  wrapper.appendChild(txtInfo);
+        // background panel
+        const panel = document.createElement("a-plane");
+        panel.setAttribute("position", "0 0.6 0");
+        panel.setAttribute("rotation", "-90 0 0");
+        panel.setAttribute("width", "2.4");
+        panel.setAttribute("height", "1.5");
+        panel.setAttribute("material", "color:#000; opacity:0.45");
+        marker.appendChild(panel);
 
-  marker.appendChild(wrapper);
+        // image
+        const img = document.createElement("a-image");
+        img.setAttribute("position", "-0.95 0.8 0.01");
+        img.setAttribute("rotation", "-90 0 0");
+        img.setAttribute("width", "1.1");
+        img.setAttribute("height", "1.1");
+        img.setAttribute(
+          "src",
+          gambar || "https://via.placeholder.com/400x400.png?text=TOGA",
+        );
+        marker.appendChild(img);
 
-  marker.addEventListener("markerFound", () => {
-    hud.textContent = `Marker terdeteksi: ${nama}`;
-    btn.href = detailUrl;
-    btn.style.display = "block";
-  });
+        // name text
+        const txtName = document.createElement("a-text");
+        txtName.setAttribute("position", "0 0.65 0.02");
+        txtName.setAttribute("rotation", "-90 0 0");
+        txtName.setAttribute("value", nama.toUpperCase());
+        txtName.setAttribute("width", "2.3");
+        txtName.setAttribute("align", "center");
+        txtName.setAttribute("color", "#FFFFFF");
+        txtName.setAttribute("outline-color", "#000000");
+        txtName.setAttribute("outline-width", "4");
+        marker.appendChild(txtName);
 
-  marker.addEventListener("markerLost", () => {
-    hud.textContent = "AR TOGA • Arahkan kamera ke QR tanaman";
-    btn.style.display = "none";
-  });
+        // info text
+        const txtInfo = document.createElement("a-text");
+        txtInfo.setAttribute("position", "0.45 0.78 0.02");
+        txtInfo.setAttribute("rotation", "-90 0 0");
+        txtInfo.setAttribute("value", firstBullets(manfaat, 3));
+        txtInfo.setAttribute("width", "2.3");
+        txtInfo.setAttribute("align", "left");
+        txtInfo.setAttribute("color", "#E8F5FF");
+        txtInfo.setAttribute("outline-color", "#000000");
+        txtInfo.setAttribute("outline-width", "3");
+        marker.appendChild(txtInfo);
 
-  return marker;
-}
+        // events: show/hide detail button
+        marker.addEventListener("markerFound", () =>
+          setMarkerFound(id, nama, detailUrl),
+        );
+        marker.addEventListener("markerLost", () => setMarkerLost(id));
 
+        return marker;
+      }
 
-    async function main() {
+      function setupDebugMode(plants) {
+        if (!DEBUG_MODE || !debugPanel || !debugSelect) return;
+
+        debugPanel.style.display = "block";
+        debugSelect.innerHTML = "";
+
+        plants.forEach((p) => {
+          const id = safeStr(p.id).trim();
+          if (!id) return;
+          const nama = safeStr(p.nama || id);
+          const detailUrl = `./?id=${encodeURIComponent(id)}`;
+          plantById.set(id, { id, nama, detailUrl });
+
+          const opt = document.createElement("option");
+          opt.value = id;
+          opt.textContent = `${nama} (${id})`;
+          debugSelect.appendChild(opt);
+        });
+
+        debugFoundBtn.onclick = () => {
+          const id = debugSelect.value;
+          const plant = plantById.get(id);
+          if (!plant) return;
+          setMarkerFound(plant.id, plant.nama, plant.detailUrl);
+        };
+
+        debugLostBtn.onclick = () => {
+          const id = debugSelect.value;
+          if (!id) return;
+          setMarkerLost(id);
+        };
+
+        debugResetBtn.onclick = () => {
+          Array.from(lostTimers.keys()).forEach((id) => clearLostTimer(id));
+          activeMarkers.clear();
+          updateActiveUI();
+        };
+      }
+
+      async function loadPlants() {
+        try {
+          const dataset = await fetchJSON(API_URL);
+          const plants = Array.isArray(dataset)
+            ? dataset
+            : Object.values(dataset || {});
+          if (plants.length > 0) return plants;
+        } catch (error) {
+          console.warn("Remote API gagal, fallback ke data lokal", error);
+        }
+
+        const local = await fetchJSON(LOCAL_DATA_URL);
+        return Array.isArray(local) ? local : Object.values(local || {});
+      }
+
+      async function main() {
         hud.textContent = "AR TOGA • Memuat data tanaman...";
         try {
-          // Ambil full dataset: {id:{...}, id2:{...}}
-          const dataset = await fetchJSON(API_URL);
-          const plants = Object.values(dataset || {});
+          const plants = await loadPlants();
 
           if (!plants.length) {
             hud.textContent = "AR TOGA • Data tanaman kosong";
@@ -187,14 +345,16 @@
             if (marker) root.appendChild(marker);
           });
 
-          hud.textContent = "AR TOGA • Siap. Arahkan kamera ke QR tanaman.";
+          setupDebugMode(plants);
+          hud.textContent = "AR TOGA • Siap. Arahkan kamera ke marker pattern.";
         } catch (e) {
           console.error(e);
-          hud.textContent = "AR TOGA • Gagal memuat data (cek koneksi/API).";
+          hud.textContent =
+            "AR TOGA • Gagal memuat data (cek koneksi/API/data lokal).";
         }
-    }
+      }
 
-    main();
+      main();
     </script>
   </body>
 </html>
