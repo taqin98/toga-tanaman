@@ -5,74 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>AR TOGA</title>
 
-  <!-- A-Frame + AR.js -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    body { margin:0; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    body{margin:0; overflow:hidden; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
     .hud{
-      position: fixed; left: 0; right: 0; top: 0;
-      padding: 10px 12px;
-      background: rgba(0,0,0,.45);
-      color: #fff; z-index: 10;
-      font-size: 14px;
+      position:fixed; left:0; right:0; top:0; z-index:10;
+      padding:10px 12px; color:#fff; background:rgba(0,0,0,.45);
+      font-size:14px;
     }
-    .hud small{ opacity:.85; display:block; margin-top:4px; }
     .btn{
-      position: fixed; bottom: 14px; left: 14px; right: 14px;
-      padding: 12px 14px; border-radius: 12px;
-      background: rgba(0,0,0,.55); color:#fff; border:1px solid rgba(255,255,255,.25);
-      z-index:10; text-align:center; text-decoration:none; font-weight:700;
+      position:fixed; left:14px; right:14px; bottom:14px; z-index:10;
+      padding:12px 14px; border-radius:12px; text-align:center;
+      background:rgba(0,0,0,.6); color:#fff; text-decoration:none; font-weight:800;
+      border:1px solid rgba(255,255,255,.25);
+      display:none;
     }
   </style>
 </head>
 
 <body>
-  <div class="hud">
-    <div id="title">AR TOGA</div>
-    <small>Arahkan kamera ke marker (Hiro) yang ditempel dekat tanaman.</small>
-  </div>
-  <a class="btn" href="./">Kembali ke info</a>
+  <div class="hud" id="hud">AR TOGA • Arahkan kamera ke QR tanaman</div>
+  <a class="btn" id="btnDetail" href="#" target="_blank" rel="noopener">Detail tanaman</a>
 
   <a-scene
-    vr-mode-ui="enabled: false"
     embedded
-    arjs="sourceType: webcam; debugUIEnabled: false;"
-    renderer="antialias: true; alpha: true;">
-    
-    <!-- Kamera -->
+    vr-mode-ui="enabled:false"
+    renderer="antialias:true; alpha:true;"
+    arjs="sourceType: webcam; debugUIEnabled:false;">
+
     <a-entity camera></a-entity>
 
-    <!-- Marker: Hiro (marker standar AR.js) -->
-    <a-marker preset="hiro">
-      <!-- Text melayang -->
-      <a-entity position="0 0.8 0" rotation="-90 0 0">
-        <a-text
-          id="plantName"
-          value="Memuat..."
-          align="center"
-          width="3.2"
-          color="#FFFFFF"
-          outline-color="#000000"
-          outline-width="4">
-        </a-text>
-      </a-entity>
+    <!-- Marker + panel akan di-generate lewat JS -->
+    <a-entity id="root"></a-entity>
 
-      <!-- Papan transparan biar tulisan kontras -->
-      <a-plane position="0 0.8 0" rotation="-90 0 0" width="2.8" height="0.7"
-        material="color: #000; opacity: 0.35">
-      </a-plane>
-    </a-marker>
   </a-scene>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
 
-    function getParam(name){
-      const u = new URL(window.location.href);
-      return u.searchParams.get(name);
+    const hud = document.getElementById("hud");
+    const btn = document.getElementById("btnDetail");
+    const root = document.getElementById("root");
+
+    function firstBullets(arr, n=3){
+      if(!Array.isArray(arr)) return "";
+      return arr.slice(0,n).map(x => `• ${x}`).join("\n");
     }
+
+    function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
 
     async function fetchJSON(url){
       const res = await fetch(url, { cache: "no-store" });
@@ -80,23 +62,99 @@
       return await res.json();
     }
 
-    async function main(){
-      const id = getParam("id");
-      if(!id){
-        document.getElementById("plantName").setAttribute("value","ID kosong");
-        document.getElementById("title").textContent = "AR TOGA (ID tidak ada)";
-        return;
-      }
+    function makeMarker(plant){
+      const id = safeStr(plant.id).trim();
+      if(!id) return null;
 
+      const nama = safeStr(plant.nama || id);
+      const gambar = safeStr(plant.gambar || "");
+      const manfaat = plant.manfaat || [];
+      const detailUrl = `./?id=${encodeURIComponent(id)}`;
+
+      // <a-marker type="pattern" url="markers/<id>.patt">
+      const marker = document.createElement("a-marker");
+      marker.setAttribute("type", "pattern");
+      marker.setAttribute("url", `markers/${encodeURIComponent(id)}.patt`);
+      marker.setAttribute("id", `m_${id}`);
+
+      // background panel
+      const panel = document.createElement("a-plane");
+      panel.setAttribute("position", "0 0.8 0");
+      panel.setAttribute("rotation", "-90 0 0");
+      panel.setAttribute("width", "2.9");
+      panel.setAttribute("height", "1.5");
+      panel.setAttribute("material", "color:#000; opacity:0.45");
+      marker.appendChild(panel);
+
+      // image
+      const img = document.createElement("a-image");
+      img.setAttribute("position", "-0.95 0.8 0.01");
+      img.setAttribute("rotation", "-90 0 0");
+      img.setAttribute("width", "1.1");
+      img.setAttribute("height", "1.1");
+      img.setAttribute("src", gambar || "https://via.placeholder.com/400x400.png?text=TOGA");
+      marker.appendChild(img);
+
+      // name text
+      const txtName = document.createElement("a-text");
+      txtName.setAttribute("position", "0.45 1.18 0.02");
+      txtName.setAttribute("rotation", "-90 0 0");
+      txtName.setAttribute("value", nama.toUpperCase());
+      txtName.setAttribute("width", "2.3");
+      txtName.setAttribute("align", "left");
+      txtName.setAttribute("color", "#FFFFFF");
+      txtName.setAttribute("outline-color", "#000000");
+      txtName.setAttribute("outline-width", "4");
+      marker.appendChild(txtName);
+
+      // info text
+      const txtInfo = document.createElement("a-text");
+      txtInfo.setAttribute("position", "0.45 0.78 0.02");
+      txtInfo.setAttribute("rotation", "-90 0 0");
+      txtInfo.setAttribute("value", firstBullets(manfaat, 3));
+      txtInfo.setAttribute("width", "2.3");
+      txtInfo.setAttribute("align", "left");
+      txtInfo.setAttribute("color", "#E8F5FF");
+      txtInfo.setAttribute("outline-color", "#000000");
+      txtInfo.setAttribute("outline-width", "3");
+      marker.appendChild(txtInfo);
+
+      // events: show/hide detail button
+      marker.addEventListener("markerFound", () => {
+        hud.textContent = `Marker terdeteksi: ${nama}`;
+        btn.href = detailUrl;
+        btn.style.display = "block";
+      });
+      marker.addEventListener("markerLost", () => {
+        hud.textContent = "AR TOGA • Arahkan kamera ke QR tanaman";
+        btn.style.display = "none";
+        btn.href = "#";
+      });
+
+      return marker;
+    }
+
+    async function main(){
+      hud.textContent = "AR TOGA • Memuat data tanaman...";
       try{
-        const plant = await fetchJSON(`${API_URL}?id=${encodeURIComponent(id)}`);
-        const nama = plant?.nama || id;
-        document.getElementById("plantName").setAttribute("value", nama.toUpperCase());
-        document.getElementById("title").textContent = `AR: ${nama}`;
+        // Ambil full dataset: {id:{...}, id2:{...}}
+        const dataset = await fetchJSON(API_URL);
+        const plants = Object.values(dataset || {});
+
+        if(!plants.length){
+          hud.textContent = "AR TOGA • Data tanaman kosong";
+          return;
+        }
+
+        plants.forEach(p => {
+          const marker = makeMarker(p);
+          if(marker) root.appendChild(marker);
+        });
+
+        hud.textContent = "AR TOGA • Siap. Arahkan kamera ke QR tanaman.";
       }catch(e){
-        document.getElementById("plantName").setAttribute("value","Gagal memuat data");
-        document.getElementById("title").textContent = "AR TOGA (Error)";
         console.error(e);
+        hud.textContent = "AR TOGA • Gagal memuat data (cek koneksi/API).";
       }
     }
 
