@@ -115,6 +115,8 @@
     >
       <a-entity camera></a-entity>
 
+      <a-assets id="assets"></a-assets>
+
       <!-- Marker + panel akan di-generate lewat JS -->
       <a-entity id="root"></a-entity>
     </a-scene>
@@ -231,16 +233,29 @@
         panel.setAttribute("material", "color:#000; opacity:0.45");
         marker.appendChild(panel);
 
-        // image
+        // image: preload in <a-assets> with crossorigin to avoid tainted WebGL textures
+        const assetsEl = document.getElementById("assets") || (() => {
+          const a = document.createElement("a-assets");
+          a.id = "assets";
+          root.parentElement.appendChild(a);
+          return a;
+        })();
+
+        const assetId = `img_${id}`;
+        if (!document.getElementById(assetId)) {
+          const imgAsset = document.createElement("img");
+          imgAsset.id = assetId;
+          imgAsset.setAttribute("crossorigin", "anonymous");
+          imgAsset.src = gambar || "https://via.placeholder.com/400x400.png?text=TOGA";
+          assetsEl.appendChild(imgAsset);
+        }
+
         const img = document.createElement("a-image");
         img.setAttribute("position", "-0.95 0.8 0.01");
         img.setAttribute("rotation", "-90 0 0");
         img.setAttribute("width", "1.1");
         img.setAttribute("height", "1.1");
-        img.setAttribute(
-          "src",
-          gambar || "https://via.placeholder.com/400x400.png?text=TOGA",
-        );
+        img.setAttribute("src", `#${assetId}`);
         marker.appendChild(img);
 
         // name text
