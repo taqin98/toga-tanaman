@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="TOGA RT 09">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f7a3e"/>
+      <stop offset="100%" stop-color="#56b36f"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="40" fill="url(#g)"/>
+  <circle cx="96" cy="96" r="66" fill="#ffffff" fill-opacity="0.18"/>
+  <path d="M123 62c-22 2-43 15-53 33-7 13-7 25-1 35 2-12 8-20 17-26 7-5 16-8 25-10-9 7-15 16-18 24 13-4 25-13 33-24 8-11 10-24 7-32z" fill="#f3fff5"/>
+  <text x="96" y="164" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#f3fff5">TOGA</text>
+</svg>
