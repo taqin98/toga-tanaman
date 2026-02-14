@@ -356,7 +356,7 @@
         const txtInfo = document.createElement("a-text");
         txtInfo.setAttribute("position", "0.55 0.95 0.02");
         txtInfo.setAttribute("rotation", "-90 0 0");
-        txtInfo.setAttribute("value", firstBullets(manfaat, 3));
+        txtInfo.setAttribute("value", manfaat ?? 'Hello World');
         txtInfo.setAttribute("width", "2.1");
         txtInfo.setAttribute("wrap-count", "22");
         txtInfo.setAttribute("line-height", "50");
