@@ -22,8 +22,8 @@ Proyek ini menyediakan:
 - Web App Manifest (`manifest.webmanifest`)
 - Service Worker (`sw.js`)
 
-## Dokumentasi Tambahan
-- Panduan debug proyek: `DEBUGGING.md`
+## Troubleshooting
+- Panduan debug proyek: [DEBUGGING.md](./DEBUGGING.md)
 
 ## Struktur Proyek
 ```txt
@@ -73,14 +73,32 @@ Catatan: isi `data/plants.json` saat ini masih kosong (`[]`), jadi untuk mode of
 Proyek ini menggunakan Google Apps Script sebagai JSON API dari Google Sheets.
 
 ### 1. Struktur Spreadsheet
+- Spreadsheet URL: `https://docs.google.com/spreadsheets/d/17BjGxtalow56mIflBtT_DihH1jJQo96r5Uur1ozZF9E/edit?usp=sharing`
 - Spreadsheet ID: `17BjGxtalow56mIflBtT_DihH1jJQo96r5Uur1ozZF9E`
 - Sheet name: `Plants`
-- Kolom wajib:
-  - `id,nama,nama_latin,jenis,gambar,manfaat,cara_pakai,catatan`
+- Susunan kolom:
+  - `id,nama,nama_latin,jenis,gambar,manfaat,cara_pakai,catatan,url_qr,gr_img`
+
+Kolom yang dibaca API utama:
+- `id,nama,nama_latin,jenis,gambar,manfaat,cara_pakai,catatan`
+
+Kolom tambahan spreadsheet:
+- `url_qr`
+- `gr_img`
 
 Format kolom list (`manfaat`, `cara_pakai`, `catatan`) dapat diisi:
 - Satu nilai saja, atau
 - Banyak nilai dipisah karakter `|` (pipe), contoh: `A|B|C`
+
+Formula spreadsheet:
+- `url_qr` (contoh di baris 2):
+```excel
+="https://taqin98.github.io/toga-tanaman/?id="&A2
+```
+- `gr_img` / QR image (contoh di baris 2):
+```excel
+=IMAGE("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data="&ENCODEURL(I2))
+```
 
 ### 2. Kode Google Apps Script
 Gunakan kode yang Anda pakai saat ini (disarankan simpan sebagai `Code.gs`):
@@ -285,18 +303,6 @@ Contoh:
 - Versi cache saat ini: `toga-v9`
 
 Jika mengubah aset penting, naikkan versi cache di `sw.js` agar cache lama dibersihkan.
-
-## Troubleshooting Singkat
-- AR tidak mendeteksi marker:
-  - Pastikan file pattern `markers/<id>_v2.patt` ada.
-  - Pastikan kamera diizinkan oleh browser.
-  - Coba `ar.html?debug=1` untuk simulasi event marker.
-- Data tidak tampil:
-  - Cek koneksi endpoint API.
-  - Pastikan format JSON data valid.
-  - Isi `data/plants.json` untuk fallback lokal.
-- Perubahan tidak terlihat:
-  - Hard refresh browser / hapus cache service worker.
 
 ## Lisensi
 Belum ditentukan. Tambahkan lisensi sesuai kebutuhan proyek.
