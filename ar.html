@@ -15,12 +15,7 @@
       body {
         margin: 0;
         overflow: hidden;
-        font-family:
-          system-ui,
-          -apple-system,
-          Segoe UI,
-          Roboto,
-          Arial;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       }
       .hud {
         position: fixed;
@@ -95,16 +90,33 @@
     <a class="btn" id="btnDetail" href="#" target="_blank" rel="noopener"
       >Detail tanaman</a
     >
+
     <div class="debug-panel" id="debugPanel">
       <p class="debug-title">DEBUG MODE • Simulasi marker</p>
+
       <div class="debug-row">
         <select id="debugSelect" class="debug-select"></select>
       </div>
+
       <div class="debug-row" style="margin-top: 8px">
         <button id="debugFound" class="debug-btn" type="button">Found</button>
         <button id="debugLost" class="debug-btn" type="button">Lost</button>
         <button id="debugReset" class="debug-btn" type="button">Reset</button>
       </div>
+
+      <div class="debug-row" style="margin-top: 8px">
+        <button id="debugExport" class="debug-btn" type="button">
+          Export JSON
+        </button>
+        <button id="debugClear" class="debug-btn" type="button">
+          Clear Log
+        </button>
+      </div>
+
+      <pre
+        id="debugLog"
+        style="margin-top:8px; max-height:180px; overflow:auto; background:rgba(0,0,0,0.45); padding:8px; border-radius:8px; font-size:12px;"
+      >[]</pre>
     </div>
 
     <a-scene
@@ -114,18 +126,26 @@
       arjs="sourceType: webcam; debugUIEnabled:false;"
     >
       <a-entity camera></a-entity>
-
       <a-assets id="assets"></a-assets>
-
-      <!-- Marker + panel akan di-generate lewat JS -->
       <a-entity id="root"></a-entity>
     </a-scene>
 
     <script>
+      // Samakan dengan pola app.js agar endpoint lebih konsisten
       const API_URL =
         "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
-      const LOCAL_DATA_URL = "./data/plants.json";
+      const LOCAL_DATA_URL = "data/plants.json";
       const FETCH_TIMEOUT_MS = 12000;
+
+      const PLACEHOLDER_SVG_DATA =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">
+            <rect fill="#dddddd" width="100%" height="100%"/>
+            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="28">TOGA</text>
+          </svg>`
+        );
+
       const LOST_DEBOUNCE_MS = 350;
       const DEBUG_MODE =
         new URLSearchParams(window.location.search).get("debug") === "1";
@@ -133,14 +153,30 @@
       const hud = document.getElementById("hud");
       const btn = document.getElementById("btnDetail");
       const root = document.getElementById("root");
+
       const debugPanel = document.getElementById("debugPanel");
       const debugSelect = document.getElementById("debugSelect");
       const debugFoundBtn = document.getElementById("debugFound");
       const debugLostBtn = document.getElementById("debugLost");
       const debugResetBtn = document.getElementById("debugReset");
+      const debugExportBtn = document.getElementById("debugExport");
+      const debugClearBtn = document.getElementById("debugClear");
+      const debugLogEl = document.getElementById("debugLog");
+
       const activeMarkers = new Map();
       const lostTimers = new Map();
       const plantById = new Map();
+      const debugEvents = [];
+
+      function logDebug(event, payload = {}) {
+        if (!DEBUG_MODE) return;
+        debugEvents.push({
+          t: new Date().toISOString(),
+          event,
+          ...payload,
+        });
+        debugLogEl.textContent = JSON.stringify(debugEvents, null, 2);
+      }
 
       function firstBullets(arr, n = 3) {
         if (!Array.isArray(arr)) return "";
@@ -154,16 +190,40 @@
         return v === null || v === undefined ? "" : String(v);
       }
 
+      function isHttpUrl(url) {
+        return /^https?:\/\//i.test(url || "");
+      }
+
+      function resolveImageSrc(gambar) {
+        const src = safeStr(gambar).trim();
+        if (!src) return PLACEHOLDER_SVG_DATA;
+
+        // jika absolute http(s), pakai langsung
+        if (isHttpUrl(src)) return src;
+
+        // jika data URL (base64 / svg)
+        if (/^data:/i.test(src)) return src;
+
+        // selain itu dianggap path lokal relatif
+        // contoh: "images/jahe.jpg" atau "./images/jahe.jpg"
+        return src.replace(/^\.\//, "");
+      }
+
       async function fetchJSON(url) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-        const res = await fetch(url, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        clearTimeout(timer);
-        if (!res.ok) throw new Error("Fetch gagal");
-        return await res.json();
+
+        try {
+          const res = await fetch(url, {
+            cache: "no-store",
+            signal: controller.signal,
+            headers: { Accept: "application/json" },
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        } finally {
+          clearTimeout(timer);
+        }
       }
 
       function clearLostTimer(id) {
@@ -193,6 +253,7 @@
         clearLostTimer(id);
         activeMarkers.set(id, { nama, detailUrl });
         updateActiveUI();
+        logDebug("markerFound", { id, nama });
       }
 
       function setMarkerLost(id) {
@@ -201,8 +262,41 @@
           activeMarkers.delete(id);
           lostTimers.delete(id);
           updateActiveUI();
+          logDebug("markerLost", { id });
         }, LOST_DEBOUNCE_MS);
         lostTimers.set(id, timer);
+      }
+
+      function ensureImageAsset(id, gambar) {
+        const assetsEl = document.getElementById("assets");
+        const assetId = `img_${id}`;
+        if (document.getElementById(assetId)) return assetId;
+
+        const imgAsset = document.createElement("img");
+        imgAsset.id = assetId;
+
+        const srcUrl = resolveImageSrc(gambar);
+
+        // crossOrigin hanya untuk http(s)
+        if (isHttpUrl(srcUrl)) imgAsset.crossOrigin = "anonymous";
+
+        imgAsset.src = srcUrl;
+
+        imgAsset.onload = () => {
+          console.debug("Image asset loaded:", assetId, srcUrl);
+          logDebug("imgLoaded", { id, srcUrl });
+        };
+
+        imgAsset.onerror = () => {
+          console.warn("Image failed (or CORS blocked):", srcUrl, "fallback placeholder");
+          logDebug("imgError", { id, srcUrl });
+          imgAsset.onerror = null;
+          imgAsset.removeAttribute("crossorigin");
+          imgAsset.src = PLACEHOLDER_SVG_DATA;
+        };
+
+        assetsEl.appendChild(imgAsset);
+        return assetId;
       }
 
       function makeMarker(plant) {
@@ -214,7 +308,6 @@
         const manfaat = plant.manfaat || [];
         const detailUrl = `./?id=${encodeURIComponent(id)}`;
 
-        // <a-marker type="pattern" url="markers/<id>.patt">
         const marker = document.createElement("a-marker");
         marker.setAttribute("type", "pattern");
         marker.setAttribute("url", `markers/${encodeURIComponent(id)}.patt`);
@@ -224,7 +317,6 @@
         marker.setAttribute("smoothTolerance", "0.01");
         marker.setAttribute("smoothThreshold", "5");
 
-        // background panel
         const panel = document.createElement("a-plane");
         panel.setAttribute("position", "0 0.6 0");
         panel.setAttribute("rotation", "-90 0 0");
@@ -233,22 +325,7 @@
         panel.setAttribute("material", "color:#000; opacity:0.45");
         marker.appendChild(panel);
 
-        // image: preload in <a-assets> with crossorigin to avoid tainted WebGL textures
-        const assetsEl = document.getElementById("assets") || (() => {
-          const a = document.createElement("a-assets");
-          a.id = "assets";
-          root.parentElement.appendChild(a);
-          return a;
-        })();
-
-        const assetId = `img_${id}`;
-        if (!document.getElementById(assetId)) {
-          const imgAsset = document.createElement("img");
-          imgAsset.id = assetId;
-          imgAsset.setAttribute("crossorigin", "anonymous");
-          imgAsset.src = gambar || "https://via.placeholder.com/400x400.png?text=TOGA";
-          assetsEl.appendChild(imgAsset);
-        }
+        const assetId = ensureImageAsset(id, gambar);
 
         const img = document.createElement("a-image");
         img.setAttribute("position", "-0.95 0.8 0.01");
@@ -258,7 +335,6 @@
         img.setAttribute("src", `#${assetId}`);
         marker.appendChild(img);
 
-        // name text
         const txtName = document.createElement("a-text");
         txtName.setAttribute("position", "0 0.65 0.02");
         txtName.setAttribute("rotation", "-90 0 0");
@@ -270,7 +346,6 @@
         txtName.setAttribute("outline-width", "4");
         marker.appendChild(txtName);
 
-        // info text
         const txtInfo = document.createElement("a-text");
         txtInfo.setAttribute("position", "0.45 0.78 0.02");
         txtInfo.setAttribute("rotation", "-90 0 0");
@@ -282,9 +357,8 @@
         txtInfo.setAttribute("outline-width", "3");
         marker.appendChild(txtInfo);
 
-        // events: show/hide detail button
         marker.addEventListener("markerFound", () =>
-          setMarkerFound(id, nama, detailUrl),
+          setMarkerFound(id, nama, detailUrl)
         );
         marker.addEventListener("markerLost", () => setMarkerLost(id));
 
@@ -296,6 +370,8 @@
 
         debugPanel.style.display = "block";
         debugSelect.innerHTML = "";
+        debugEvents.length = 0;
+        debugLogEl.textContent = "[]";
 
         plants.forEach((p) => {
           const id = safeStr(p.id).trim();
@@ -310,6 +386,7 @@
           debugSelect.appendChild(opt);
         });
 
+        // FIX: debugZSelect -> debugSelect
         debugFoundBtn.onclick = () => {
           const id = debugSelect.value;
           const plant = plantById.get(id);
@@ -327,12 +404,29 @@
           Array.from(lostTimers.keys()).forEach((id) => clearLostTimer(id));
           activeMarkers.clear();
           updateActiveUI();
+          logDebug("reset");
+        };
+
+        debugExportBtn.onclick = async () => {
+          const json = JSON.stringify(debugEvents, null, 2);
+          try {
+            await navigator.clipboard.writeText(json);
+            alert("Log debug disalin ke clipboard.");
+          } catch (_) {
+            window.prompt("Copy JSON ini:", json);
+          }
+        };
+
+        debugClearBtn.onclick = () => {
+          debugEvents.length = 0;
+          debugLogEl.textContent = "[]";
         };
       }
 
       async function loadPlants() {
+        // Samakan dengan app.js: mode=list
         try {
-          const dataset = await fetchJSON(API_URL);
+          const dataset = await fetchJSON(`${API_URL}?mode=list`);
           const plants = Array.isArray(dataset)
             ? dataset
             : Object.values(dataset || {});

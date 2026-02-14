@@ -132,6 +132,11 @@ function show(id) {
   target.classList.add("state-enter");
 }
 
+function resolveImg(src) {
+  if (!src) return "";
+  return String(src).replace(/^\.\//, "");
+}
+
 function makeListCard(item) {
   const a = document.createElement("a");
   a.href = `./?id=${encodeURIComponent(item.id)}`;
@@ -139,8 +144,9 @@ function makeListCard(item) {
 
   const img = document.createElement("img");
   img.className = "thumb";
-  img.src = item.gambar || "";
+  img.src = resolveImg(item.gambar || "");
   img.alt = `Foto ${item.nama || ""}`;
+
 
   const wrap = document.createElement("div");
   const title = document.createElement("h4");
