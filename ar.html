@@ -340,7 +340,7 @@
         const assetId = ensureImageAsset(id, gambar);
 
         const img = document.createElement("a-image");
-        img.setAttribute("position", "-0.95 0.8 0.01");
+        img.setAttribute("position", "-0.6 0.8 0.01");
         img.setAttribute("rotation", "-90 0 0");
         img.setAttribute("width", "1.1");
         img.setAttribute("height", "1.1");
@@ -365,6 +365,7 @@
         txtInfo.setAttribute("value", firstBullets(manfaat, 4));
         txtInfo.setAttribute("width", "1.4");
         txtInfo.setAttribute("align", "left");
+        txtInfo.setAttribute("baseline", "top");
         txtInfo.setAttribute("wrap-count", "28");
         txtInfo.setAttribute("color", "#E8F5FF");
         txtInfo.setAttribute("outline-color", "#000000");
