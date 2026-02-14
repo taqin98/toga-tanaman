@@ -179,8 +179,8 @@
       }
 
       function firstBullets(arr, n = 3) {
-        const arr = normalizeList(v);
-        return arr.slice(0, n).map((x) => `• ${x}`).join("\n");
+        let arrData = normalizeList(arr);
+        return arrData.slice(0, n).map((x) => `• ${x}`).join("\n");
       }
 
       function safeStr(v) {
