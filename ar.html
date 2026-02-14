@@ -178,6 +178,21 @@
         debugLogEl.textContent = JSON.stringify(debugEvents, null, 2);
       }
 
+      function normalizeList(value) {
+        if (Array.isArray(value)) {
+          return value.map((x) => safeStr(x).trim()).filter(Boolean);
+        }
+
+        if (typeof value === "string") {
+          return value
+            .split(/\r?\n|;|\|/)
+            .map((x) => x.trim())
+            .filter(Boolean);
+        }
+
+        return [];
+      }
+
       function firstBullets(arr, n = 3) {
         let arrData = normalizeList(arr);
         return arrData.slice(0, n).map((x) => `• ${x}`).join("\n");
