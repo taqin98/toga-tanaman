@@ -348,22 +348,24 @@
         marker.appendChild(img);
 
         const txtName = document.createElement("a-text");
-        txtName.setAttribute("position", "0 0.65 0.02");
+        txtName.setAttribute("position", "0.45 1.07 0.02");
         txtName.setAttribute("rotation", "-90 0 0");
         txtName.setAttribute("value", nama.toUpperCase());
-        txtName.setAttribute("width", "2.3");
-        txtName.setAttribute("align", "center");
+        txtName.setAttribute("width", "1.4");
+        txtName.setAttribute("align", "left");
+        txtName.setAttribute("wrap-count", "18");
         txtName.setAttribute("color", "#FFFFFF");
         txtName.setAttribute("outline-color", "#000000");
         txtName.setAttribute("outline-width", "4");
         marker.appendChild(txtName);
 
         const txtInfo = document.createElement("a-text");
-        txtInfo.setAttribute("position", "0.45 0.78 0.02");
+        txtInfo.setAttribute("position", "0.45 0.86 0.02");
         txtInfo.setAttribute("rotation", "-90 0 0");
-        txtInfo.setAttribute("value", manfaat ?? "Tidak ada informasi manfaat.");
-        txtInfo.setAttribute("width", "2.3");
+        txtInfo.setAttribute("value", firstBullets(manfaat, 4));
+        txtInfo.setAttribute("width", "1.4");
         txtInfo.setAttribute("align", "left");
+        txtInfo.setAttribute("wrap-count", "28");
         txtInfo.setAttribute("color", "#E8F5FF");
         txtInfo.setAttribute("outline-color", "#000000");
         txtInfo.setAttribute("outline-width", "3");
