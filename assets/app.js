@@ -1,97 +1,215 @@
-const API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhLNODnryZaROotw9GdP-pf-FdGHb1vXFKYrIJU0pZ32bLfAkJuR1jUbwhHvToU2oFnT3BlX-HJaR_GoTrSxcSdWWonPrza16jsDBQCQRuL4rvVHzepdEocKgZrizZGJgbLSZUT4HDI1zhibl_Z6M0h9MV3A8zjG7PnQYb5_Rg3HdE4su2cu4-6GRmXNM4aQQfAbm6V1DPPg2QYie2kDYgSdcUjhsDqUnBhW1Kq3uQOCVjacUSs_FrKgfHivHRNo-QkuuocaV8-CF6rggvD5gepb54GLz5VYN5NC0bEBzZkKvlMs5c&lib=MySi8iqgDJHi9tGKi8o9MMQy-BUcvC6lV";
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+const LOCAL_DATA_URL = "data/plants.json";
+const FETCH_TIMEOUT_MS = 12000;
 
 const $ = (id) => document.getElementById(id);
 
-function getParam(name){
+function getParam(name) {
   const u = new URL(window.location.href);
   return u.searchParams.get(name);
 }
 
-async function fetchJSON(url){
-  return new Promise((resolve, reject) => {
-    const cbName = "cb_" + Math.random().toString(36).substring(2);
+function toList(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
 
-    window[cbName] = (data) => {
-      resolve(data);
-      delete window[cbName];
-      script.remove();
-    };
+  if (typeof value === "string") {
+    // Support: newline, ;, or | from spreadsheet
+    return value
+      .split(/\r?\n|;|\|/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }
 
-    const script = document.createElement("script");
-    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cbName;
-    script.onerror = () => reject("Gagal load JSONP");
-    document.body.appendChild(script);
-  });
+  return [];
 }
 
-function setList(el, items){
+function normalizePlant(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const id = String(raw.id || "").trim();
+  if (!id) return null;
+
+  return {
+    id,
+    nama: raw.nama || "-",
+    nama_latin: raw.nama_latin || "",
+    jenis: raw.jenis || "TOGA",
+    gambar: raw.gambar || "",
+    manfaat: toList(raw.manfaat),
+    cara_pakai: toList(raw.cara_pakai),
+    catatan: toList(raw.catatan),
+  };
+}
+
+function normalizePlantList(data) {
+  // mode=list biasanya return array
+  // full dataset bisa return object map {id: {...}}
+  if (Array.isArray(data)) return data.map(normalizePlant).filter(Boolean);
+
+  // kalau object map: ambil values()
+  if (data && typeof data === "object") {
+    return Object.values(data).map(normalizePlant).filter(Boolean);
+  }
+
+  // support struktur {data:[...]} jika suatu saat kamu ubah API
+  const maybeArr = Array.isArray(data?.data) ? data.data : [];
+  return maybeArr.map(normalizePlant).filter(Boolean);
+}
+
+async function fetchRemoteJSON(url, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    // Kalau server balas bukan JSON valid, ini akan throw dan masuk fallback
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchLocalPlants() {
+  const res = await fetch(LOCAL_DATA_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error("Gagal membaca data lokal");
+  const json = await res.json();
+  return normalizePlantList(json);
+}
+
+async function loadPlants() {
+  try {
+    // Remote list
+    const remote = await fetchRemoteJSON(`${API_URL}?mode=list`);
+    const normalized = normalizePlantList(remote);
+    if (normalized.length > 0) return normalized;
+  } catch (err) {
+    // Kena CORS biasanya errornya TypeError: Failed to fetch
+    console.warn("Remote list gagal, fallback lokal:", err);
+  }
+
+  return await fetchLocalPlants();
+}
+
+async function loadPlantDetail(id, fallbackMap) {
+  try {
+    const remote = await fetchRemoteJSON(
+      `${API_URL}?id=${encodeURIComponent(id)}`
+    );
+    const normalized = normalizePlant(remote);
+    if (normalized) return normalized;
+  } catch (err) {
+    console.warn("Remote detail gagal, fallback list map:", err);
+  }
+
+  return fallbackMap.get(id) || null;
+}
+
+function setList(el, items) {
   el.innerHTML = "";
-  (items || []).forEach(t => {
+  (items || []).forEach((t) => {
     const li = document.createElement("li");
     li.textContent = t;
     el.appendChild(li);
   });
 }
 
-function show(id){
-  ["stateLoading","stateError","stateList","stateDetail"].forEach(x => $(x).classList.add("hidden"));
+function show(id) {
+  ["stateLoading", "stateError", "stateList", "stateDetail"].forEach((x) =>
+    $(x).classList.add("hidden")
+  );
   $(id).classList.remove("hidden");
 }
 
-function makeListCard(item){
+function makeListCard(item) {
   const a = document.createElement("a");
   a.href = `./?id=${encodeURIComponent(item.id)}`;
   a.className = "card item";
-  a.innerHTML = `
-    <img class="thumb" src="${item.gambar || ""}" alt="Foto ${item.nama || ""}">
-    <div>
-      <h4>${item.nama || "-"}</h4>
-      <div class="meta">${item.jenis || ""} • ${item.nama_latin || ""}</div>
-    </div>
-  `;
+
+  const img = document.createElement("img");
+  img.className = "thumb";
+  img.src = item.gambar || "";
+  img.alt = `Foto ${item.nama || ""}`;
+
+  const wrap = document.createElement("div");
+  const title = document.createElement("h4");
+  title.textContent = item.nama || "-";
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = `${item.jenis || ""} • ${item.nama_latin || ""}`;
+
+  wrap.appendChild(title);
+  wrap.appendChild(meta);
+  a.appendChild(img);
+  a.appendChild(wrap);
+
   return a;
 }
 
-async function main(){
+function renderDetail(plant) {
+  $("img").src = plant.gambar || "";
+  $("nama").textContent = plant.nama || "-";
+  $("latin").textContent = plant.nama_latin
+    ? `Nama latin: ${plant.nama_latin}`
+    : "";
+  $("chipJenis").textContent = plant.jenis || "TOGA";
+
+  setList($("manfaat"), plant.manfaat);
+  setList($("cara"), plant.cara_pakai);
+  setList($("catatan"), plant.catatan);
+
+  $("btnShare").onclick = async () => {
+    const url = window.location.href;
+    const text = `Info TOGA: ${plant.nama} (RT 09)`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: plant.nama, text, url });
+      } catch (_) {}
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      alert("Link sudah disalin.");
+    } catch (_) {
+      window.prompt("Salin link ini:", url);
+    }
+  };
+}
+
+async function main() {
   show("stateLoading");
 
-  try{
+  try {
+    const plants = await loadPlants();
+    const byId = new Map(plants.map((item) => [item.id, item]));
     const id = getParam("id");
 
-    // LIST
-    if(!id){
-      const list = await fetchJSON(`${API_URL}?mode=list`);
+    if (!id) {
       $("listWrap").innerHTML = "";
-      list.forEach(item => $("listWrap").appendChild(makeListCard(item)));
+      plants.forEach((item) => $("listWrap").appendChild(makeListCard(item)));
+
+      if (plants.length === 0) throw new Error("Data tanaman kosong");
+
       show("stateList");
       return;
     }
 
-    // DETAIL
-    const plant = await fetchJSON(`${API_URL}?id=${encodeURIComponent(id)}`);
+    const plant = await loadPlantDetail(id, byId);
+    if (!plant) throw new Error("Tanaman tidak ditemukan");
 
-    $("img").src = plant.gambar || "";
-    $("nama").textContent = plant.nama || "-";
-    $("latin").textContent = plant.nama_latin ? `Nama latin: ${plant.nama_latin}` : "";
-    $("chipJenis").textContent = plant.jenis || "TOGA";
-
-    setList($("manfaat"), plant.manfaat);
-    setList($("cara"), plant.cara_pakai);
-    setList($("catatan"), plant.catatan);
-
-    $("btnShare").onclick = async () => {
-      const url = window.location.href;
-      const text = `Info TOGA: ${plant.nama} (RT 09)`;
-      if(navigator.share){
-        try{ await navigator.share({ title: plant.nama, text, url }); }catch(_){}
-      }else{
-        await navigator.clipboard.writeText(url);
-        alert("Link sudah disalin.");
-      }
-    };
-
+    renderDetail(plant);
     show("stateDetail");
-  }catch(err){
+  } catch (err) {
     console.error(err);
     show("stateError");
   }
