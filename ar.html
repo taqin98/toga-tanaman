@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AR TOGA</title>
+
+  <!-- A-Frame + AR.js -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    body { margin:0; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .hud{
+      position: fixed; left: 0; right: 0; top: 0;
+      padding: 10px 12px;
+      background: rgba(0,0,0,.45);
+      color: #fff; z-index: 10;
+      font-size: 14px;
+    }
+    .hud small{ opacity:.85; display:block; margin-top:4px; }
+    .btn{
+      position: fixed; bottom: 14px; left: 14px; right: 14px;
+      padding: 12px 14px; border-radius: 12px;
+      background: rgba(0,0,0,.55); color:#fff; border:1px solid rgba(255,255,255,.25);
+      z-index:10; text-align:center; text-decoration:none; font-weight:700;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hud">
+    <div id="title">AR TOGA</div>
+    <small>Arahkan kamera ke marker (Hiro) yang ditempel dekat tanaman.</small>
+  </div>
+  <a class="btn" href="./">Kembali ke info</a>
+
+  <a-scene
+    vr-mode-ui="enabled: false"
+    embedded
+    arjs="sourceType: webcam; debugUIEnabled: false;"
+    renderer="antialias: true; alpha: true;">
+    
+    <!-- Kamera -->
+    <a-entity camera></a-entity>
+
+    <!-- Marker: Hiro (marker standar AR.js) -->
+    <a-marker preset="hiro">
+      <!-- Text melayang -->
+      <a-entity position="0 0.8 0" rotation="-90 0 0">
+        <a-text
+          id="plantName"
+          value="Memuat..."
+          align="center"
+          width="3.2"
+          color="#FFFFFF"
+          outline-color="#000000"
+          outline-width="4">
+        </a-text>
+      </a-entity>
+
+      <!-- Papan transparan biar tulisan kontras -->
+      <a-plane position="0 0.8 0" rotation="-90 0 0" width="2.8" height="0.7"
+        material="color: #000; opacity: 0.35">
+      </a-plane>
+    </a-marker>
+  </a-scene>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+
+    function getParam(name){
+      const u = new URL(window.location.href);
+      return u.searchParams.get(name);
+    }
+
+    async function fetchJSON(url){
+      const res = await fetch(url, { cache: "no-store" });
+      if(!res.ok) throw new Error("Fetch gagal");
+      return await res.json();
+    }
+
+    async function main(){
+      const id = getParam("id");
+      if(!id){
+        document.getElementById("plantName").setAttribute("value","ID kosong");
+        document.getElementById("title").textContent = "AR TOGA (ID tidak ada)";
+        return;
+      }
+
+      try{
+        const plant = await fetchJSON(`${API_URL}?id=${encodeURIComponent(id)}`);
+        const nama = plant?.nama || id;
+        document.getElementById("plantName").setAttribute("value", nama.toUpperCase());
+        document.getElementById("title").textContent = `AR: ${nama}`;
+      }catch(e){
+        document.getElementById("plantName").setAttribute("value","Gagal memuat data");
+        document.getElementById("title").textContent = "AR TOGA (Error)";
+        console.error(e);
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
