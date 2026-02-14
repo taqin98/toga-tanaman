@@ -136,6 +136,8 @@
         "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
       const LOCAL_DATA_URL = "data/plants.json";
       const FETCH_TIMEOUT_MS = 12000;
+      const CACHE_TTL_MS = 10 * 60 * 1000;
+      const CACHE_KEY_LIST = "toga:plants:list:v1";
 
       const PLACEHOLDER_SVG_DATA =
         "data:image/svg+xml;utf8," +
@@ -227,7 +229,7 @@
 
         try {
           const res = await fetch(url, {
-            cache: "no-store",
+            cache: "default",
             signal: controller.signal,
             headers: { Accept: "application/json" },
           });
@@ -236,6 +238,26 @@
         } finally {
           clearTimeout(timer);
         }
+      }
+
+      function readCache(key, ttlMs = CACHE_TTL_MS) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== "object") return null;
+          const age = Date.now() - Number(parsed.ts || 0);
+          if (age > ttlMs) return null;
+          return parsed.data;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function writeCache(key, data) {
+        try {
+          localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+        } catch (_) {}
       }
 
       function clearLostTimer(id) {
@@ -439,13 +461,32 @@
       }
 
       async function loadPlants() {
+        const cached = readCache(CACHE_KEY_LIST);
+        const cachedPlants = Array.isArray(cached)
+          ? cached
+          : Object.values(cached || {});
+        if (cachedPlants.length > 0) {
+          fetchJSON(`${API_URL}?mode=list`)
+            .then((dataset) => {
+              const plants = Array.isArray(dataset)
+                ? dataset
+                : Object.values(dataset || {});
+              if (plants.length > 0) writeCache(CACHE_KEY_LIST, plants);
+            })
+            .catch(() => {});
+          return cachedPlants;
+        }
+
         // Samakan dengan app.js: mode=list
         try {
           const dataset = await fetchJSON(`${API_URL}?mode=list`);
           const plants = Array.isArray(dataset)
             ? dataset
             : Object.values(dataset || {});
-          if (plants.length > 0) return plants;
+          if (plants.length > 0) {
+            writeCache(CACHE_KEY_LIST, plants);
+            return plants;
+          }
         } catch (error) {
           console.warn("Remote API gagal, fallback ke data lokal", error);
         }

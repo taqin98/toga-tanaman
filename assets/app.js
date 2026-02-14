@@ -2,6 +2,11 @@ const API_URL =
   "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
 const LOCAL_DATA_URL = "data/plants.json";
 const FETCH_TIMEOUT_MS = 12000;
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_KEYS = {
+  list: "toga:plants:list:v1",
+  detail: (id) => `toga:plants:detail:v1:${id}`,
+};
 const LIST_STATE = {
   query: "",
   jenis: "all",
@@ -63,7 +68,7 @@ async function fetchRemoteJSON(url, timeoutMs = FETCH_TIMEOUT_MS) {
 
   try {
     const res = await fetch(url, {
-      cache: "no-store",
+      cache: "default",
       signal: controller.signal,
       headers: { Accept: "application/json" },
     });
@@ -76,18 +81,55 @@ async function fetchRemoteJSON(url, timeoutMs = FETCH_TIMEOUT_MS) {
   }
 }
 
+function readCache(key, ttlMs = CACHE_TTL_MS) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    const age = Date.now() - Number(parsed.ts || 0);
+    if (age > ttlMs) return null;
+    return parsed.data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeCache(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch (_) {}
+}
+
 async function fetchLocalPlants() {
-  const res = await fetch(LOCAL_DATA_URL, { cache: "no-store" });
+  const res = await fetch(LOCAL_DATA_URL, { cache: "default" });
   if (!res.ok) throw new Error("Gagal membaca data lokal");
   const json = await res.json();
   return normalizePlantList(json);
 }
 
-async function loadPlants() {
+async function refreshPlantsCache() {
   try {
     const remote = await fetchRemoteJSON(`${API_URL}?mode=list`);
     const normalized = normalizePlantList(remote);
-    if (normalized.length > 0) return normalized;
+    if (normalized.length > 0) writeCache(CACHE_KEYS.list, normalized);
+  } catch (_) {}
+}
+
+async function loadPlants() {
+  const cached = normalizePlantList(readCache(CACHE_KEYS.list));
+  if (cached.length > 0) {
+    refreshPlantsCache();
+    return cached;
+  }
+
+  try {
+    const remote = await fetchRemoteJSON(`${API_URL}?mode=list`);
+    const normalized = normalizePlantList(remote);
+    if (normalized.length > 0) {
+      writeCache(CACHE_KEYS.list, normalized);
+      return normalized;
+    }
   } catch (err) {
     console.warn("Remote list gagal, fallback lokal:", err);
   }
@@ -95,18 +137,43 @@ async function loadPlants() {
   return await fetchLocalPlants();
 }
 
-async function loadPlantDetail(id, fallbackMap) {
+async function refreshPlantDetailCache(id) {
   try {
     const remote = await fetchRemoteJSON(
       `${API_URL}?id=${encodeURIComponent(id)}`
     );
     const normalized = normalizePlant(remote);
-    if (normalized) return normalized;
+    if (normalized) writeCache(CACHE_KEYS.detail(id), normalized);
+  } catch (_) {}
+}
+
+async function loadPlantDetail(id, fallbackMap) {
+  const cached = normalizePlant(readCache(CACHE_KEYS.detail(id)));
+  if (cached) {
+    refreshPlantDetailCache(id);
+    return cached;
+  }
+
+  const fallback = fallbackMap.get(id) || null;
+  if (fallback) {
+    refreshPlantDetailCache(id);
+    return fallback;
+  }
+
+  try {
+    const remote = await fetchRemoteJSON(
+      `${API_URL}?id=${encodeURIComponent(id)}`
+    );
+    const normalized = normalizePlant(remote);
+    if (normalized) {
+      writeCache(CACHE_KEYS.detail(id), normalized);
+      return normalized;
+    }
   } catch (err) {
     console.warn("Remote detail gagal, fallback list map:", err);
   }
 
-  return fallbackMap.get(id) || null;
+  return null;
 }
 
 function setList(el, items) {
@@ -146,6 +213,8 @@ function makeListCard(item) {
   img.className = "thumb";
   img.src = resolveImg(item.gambar || "");
   img.alt = `Foto ${item.nama || ""}`;
+  img.loading = "lazy";
+  img.decoding = "async";
 
 
   const wrap = document.createElement("div");
@@ -272,7 +341,10 @@ function setupListInteractions(plants) {
 }
 
 function renderDetail(plant) {
-  $("img").src = plant.gambar || "";
+  const img = $("img");
+  img.decoding = "async";
+  img.fetchPriority = "high";
+  img.src = plant.gambar || "";
   $("nama").textContent = plant.nama || "-";
   $("latin").textContent = plant.nama_latin
     ? `Nama latin: ${plant.nama_latin}`
