@@ -76,12 +76,16 @@
       marker.setAttribute("type", "pattern");
       marker.setAttribute("url", `markers/${encodeURIComponent(id)}.patt`);
       marker.setAttribute("id", `m_${id}`);
+      marker.setAttribute("smooth", "true");
+      marker.setAttribute("smoothCount", "10");
+      marker.setAttribute("smoothTolerance", "0.01");
+      marker.setAttribute("smoothThreshold", "5");
 
       // background panel
       const panel = document.createElement("a-plane");
-      panel.setAttribute("position", "0 0.8 0");
+      panel.setAttribute("position", "0 0.6 0");
       panel.setAttribute("rotation", "-90 0 0");
-      panel.setAttribute("width", "2.9");
+      panel.setAttribute("width", "2.4");
       panel.setAttribute("height", "1.5");
       panel.setAttribute("material", "color:#000; opacity:0.45");
       marker.appendChild(panel);
@@ -97,11 +101,11 @@
 
       // name text
       const txtName = document.createElement("a-text");
-      txtName.setAttribute("position", "0.45 1.18 0.02");
+      txtName.setAttribute("position", "0 0.65 0.02");
       txtName.setAttribute("rotation", "-90 0 0");
       txtName.setAttribute("value", nama.toUpperCase());
       txtName.setAttribute("width", "2.3");
-      txtName.setAttribute("align", "left");
+      txtName.setAttribute("align", "center");
       txtName.setAttribute("color", "#FFFFFF");
       txtName.setAttribute("outline-color", "#000000");
       txtName.setAttribute("outline-width", "4");
