@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>TOGA RT 09</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🌿</div>
+      <div>
+        <div class="title">TOGA RT 09</div>
+        <div class="subtitle">Scan QR untuk info tanaman</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="stateLoading" class="card">
+      <div class="skeleton-img"></div>
+      <div class="skeleton-line w60"></div>
+      <div class="skeleton-line w40"></div>
+      <div class="skeleton-line w90"></div>
+      <div class="skeleton-line w80"></div>
+    </section>
+
+    <section id="stateError" class="card hidden">
+      <h2>Tanaman tidak ditemukan</h2>
+      <p>Cek kembali QR Code atau parameter <code>?id=...</code>.</p>
+      <a class="btn" href="./">Lihat daftar tanaman</a>
+    </section>
+
+    <section id="stateList" class="hidden">
+      <h2 class="section-title">Daftar Tanaman</h2>
+      <div id="listWrap" class="grid"></div>
+    </section>
+
+    <section id="stateDetail" class="hidden">
+      <article class="card">
+        <img id="img" class="hero" alt="Foto tanaman" />
+        <div class="pad">
+          <div class="chips">
+            <span id="chipJenis" class="chip"></span>
+            <span class="chip chip-soft">RT 09 • PKK</span>
+          </div>
+
+          <h1 id="nama" class="h1"></h1>
+          <div id="latin" class="latin"></div>
+
+          <div class="divider"></div>
+
+          <h3 class="h3">Manfaat</h3>
+          <ul id="manfaat" class="list"></ul>
+
+          <h3 class="h3">Cara penggunaan (ringkas)</h3>
+          <ol id="cara" class="list"></ol>
+
+          <h3 class="h3">Catatan / Peringatan</h3>
+          <ul id="catatan" class="list"></ul>
+
+          <div class="actions">
+            <a class="btn" href="./">Daftar tanaman</a>
+            <button id="btnShare" class="btn btn-ghost" type="button">Bagikan</button>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>© RT 09 & PKK • Sistem Informasi TOGA berbasis QR</small>
+  </footer>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
