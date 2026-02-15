@@ -86,6 +86,14 @@ Kolom tambahan spreadsheet:
 - `url_qr`
 - `gr_img`
 
+Untuk data galeri, tambahkan sheet baru:
+- Sheet name: `Galleries`
+- Kolom:
+  - `id,title,image,date,location,person,desc`
+
+Contoh isi row `Galleries`:
+- `gal-001,Kerja Bakti TOGA,https://images.unsplash.com/... ,2026-02-10,Kebun RT 09,Ibu PKK,Perawatan rutin area tanam TOGA`
+
 Format kolom list (`manfaat`, `cara_pakai`, `catatan`) dapat diisi:
 - Satu nilai saja, atau
 - Banyak nilai dipisah karakter `|` (pipe), contoh: `A|B|C`
@@ -125,6 +133,11 @@ function doGet(e) {
   const mode = (params.mode || "").trim();
 
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  if (mode === "gallery") {
+    return output_(callback, getGallery_(ss));
+  }
+
   const sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) return output_(callback, { error: `Sheet "${SHEET_NAME}" tidak ditemukan.` });
 
@@ -211,6 +224,29 @@ function jsonCORS_(obj) {
   out.setHeader("Access-Control-Allow-Headers", "Content-Type");
   return out;
 }
+
+function getGallery_(ss) {
+  const gallerySheet = ss.getSheetByName("Galleries");
+  if (!gallerySheet) return [];
+
+  const values = gallerySheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const rows = values.slice(1);
+  return rows
+    .map(r => rowToObj_(headers, r))
+    .filter(o => String(o.image || "").trim())
+    .map((o, i) => ({
+      id: String(o.id || `gallery-${i + 1}`).trim(),
+      title: String(o.title || "").trim(),
+      image: String(o.image || "").trim(),
+      date: String(o.date || "").trim(),
+      location: String(o.location || "").trim(),
+      person: String(o.person || "").trim(),
+      desc: String(o.desc || "").trim()
+    }));
+}
 ```
 
 ### 3. Deploy sebagai Web App
@@ -230,6 +266,8 @@ function jsonCORS_(obj) {
   - `GET <WEB_APP_URL>/exec?id=kunyit`
 - Semua data normalisasi (objek by id):
   - `GET <WEB_APP_URL>/exec`
+- List galeri:
+  - `GET <WEB_APP_URL>/exec?mode=gallery`
 
 ### 5. Integrasi ke Proyek
 Ganti nilai `API_URL` di:

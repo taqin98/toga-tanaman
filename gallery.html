@@ -108,6 +108,24 @@
       .gallery-item:active {
         transform: scale(0.98);
       }
+      .gallery-actions {
+        display: flex;
+        justify-content: center;
+        margin-top: 12px;
+      }
+      .load-more {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(223, 255, 243, 0.08);
+        color: var(--text);
+        padding: 10px 14px;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .load-more.hidden {
+        display: none;
+      }
       .bottom-nav {
         position: fixed;
         left: 12px;
@@ -237,13 +255,16 @@
         </a>
         <div>
           <h1 class="title">Galeri Dokumentasi</h1>
-          <p class="subtitle">Dummy data, siap diganti source Google Sheet</p>
+          <p id="gallerySourceText" class="subtitle">Memuat data galeri...</p>
         </div>
       </div>
     </header>
 
     <main class="container">
       <section id="galleryGrid" class="gallery-grid" aria-label="Daftar foto galeri"></section>
+      <div class="gallery-actions">
+        <button id="loadMoreBtn" class="load-more hidden" type="button">Muat lagi</button>
+      </div>
     </main>
 
     <div id="previewModal" class="preview" role="dialog" aria-modal="true" aria-label="Preview galeri">
@@ -308,34 +329,183 @@
     </nav>
 
     <script>
-      // Dummy data. Nanti bisa diganti hasil fetch dari Google Sheet.
+      const API_URL =
+        "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+      const FETCH_TIMEOUT_MS = 12000;
+      const CACHE_TTL_MS = 10 * 60 * 1000;
+      const CACHE_KEY_GALLERY = "toga:gallery:list:v1";
+      const PAGE_SIZE = 9;
+
       const kegiatan = ["Edukasi", "Perawatan", "Panen", "Gotong Royong", "Pelatihan", "Monitoring"];
       const lokasi = ["Kebun RT 09", "Posyandu", "Balai Warga", "Halaman Masjid"];
       const petugas = ["Ibu PKK", "Karang Taruna", "Kader Kesehatan", "Relawan RT"];
 
-      const items = Array.from({ length: 24 }, (_, i) => {
-        const idx = i + 1;
-        const kegiatanText = kegiatan[Math.floor(Math.random() * kegiatan.length)];
-        const lokasiText = lokasi[Math.floor(Math.random() * lokasi.length)];
-        const petugasText = petugas[Math.floor(Math.random() * petugas.length)];
-        return {
-          id: `doc-${idx}`,
-          title: `${kegiatanText} TOGA #${idx}`,
-          image: `https://picsum.photos/seed/toga-${idx}/600`,
-          date: `2026-0${(idx % 9) + 1}-${String((idx % 27) + 1).padStart(2, "0")}`,
-          location: lokasiText,
-          person: petugasText,
-          desc: `Dokumentasi kegiatan ${kegiatanText.toLowerCase()} TOGA bersama warga di ${lokasiText}.`,
-        };
-      });
-
       const gridEl = document.getElementById("galleryGrid");
       const modalEl = document.getElementById("previewModal");
       const closeEl = document.getElementById("previewClose");
+      const sourceEl = document.getElementById("gallerySourceText");
+      const loadMoreBtn = document.getElementById("loadMoreBtn");
       const previewImgEl = document.getElementById("previewImg");
       const previewTitleEl = document.getElementById("previewTitle");
       const previewMetaEl = document.getElementById("previewMeta");
       const previewDescEl = document.getElementById("previewDesc");
+      let allItems = [];
+      let visibleCount = 0;
+
+      function normalizeDriveImageUrl(value) {
+        const input = String(value || "").trim();
+        if (!input) return "";
+
+        try {
+          const url = new URL(input);
+          const host = url.hostname.toLowerCase();
+          const idFromQuery = url.searchParams.get("id");
+
+          if (host.includes("drive.google.com")) {
+            if (url.pathname.includes("/thumbnail")) {
+              const id = idFromQuery;
+              if (id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w400`;
+            }
+
+            if (url.pathname.includes("/file/d/")) {
+              const match = url.pathname.match(/\/file\/d\/([^/]+)/);
+              if (match && match[1]) {
+                return `https://drive.google.com/thumbnail?id=${encodeURIComponent(match[1])}&sz=w400`;
+              }
+            }
+
+            if (idFromQuery) {
+              return `https://drive.google.com/thumbnail?id=${encodeURIComponent(idFromQuery)}&sz=w400`;
+            }
+          }
+
+          if (host.includes("drive.usercontent.google.com") && idFromQuery) {
+            return `https://drive.google.com/thumbnail?id=${encodeURIComponent(idFromQuery)}&sz=w400`;
+          }
+        } catch (_) {}
+
+        return input;
+      }
+
+      function makeDummyItems(total = 24) {
+        return Array.from({ length: total }, (_, i) => {
+          const idx = i + 1;
+          const kegiatanText = kegiatan[Math.floor(Math.random() * kegiatan.length)];
+          const lokasiText = lokasi[Math.floor(Math.random() * lokasi.length)];
+          const petugasText = petugas[Math.floor(Math.random() * petugas.length)];
+          return {
+            id: `doc-${idx}`,
+            title: `${kegiatanText} TOGA #${idx}`,
+            image: `https://picsum.photos/seed/toga-${idx}/600`,
+            date: `2026-0${(idx % 9) + 1}-${String((idx % 27) + 1).padStart(2, "0")}`,
+            location: lokasiText,
+            person: petugasText,
+            desc: `Dokumentasi kegiatan ${kegiatanText.toLowerCase()} TOGA bersama warga di ${lokasiText}.`,
+          };
+        });
+      }
+
+      function normalizeGalleryItem(raw, index = 0) {
+        if (!raw || typeof raw !== "object") return null;
+
+        const id = String(raw.id || `gallery-${index + 1}`).trim();
+        const title = String(raw.title || raw.judul || "").trim();
+        const image = normalizeDriveImageUrl(raw.image || raw.gambar || "");
+        const date = String(raw.date || raw.tanggal || "").trim();
+        const location = String(raw.location || raw.lokasi || "").trim();
+        const person = String(raw.person || raw.petugas || "").trim();
+        const desc = String(raw.desc || raw.deskripsi || "").trim();
+
+        if (!image) return null;
+
+        return {
+          id,
+          title: title || `Dokumentasi ${id}`,
+          image,
+          date: date || "-",
+          location: location || "-",
+          person: person || "-",
+          desc: desc || "Belum ada deskripsi.",
+        };
+      }
+
+      function normalizeGalleryList(payload) {
+        const arr = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+          ? payload.data
+          : [];
+        return arr.map(normalizeGalleryItem).filter(Boolean);
+      }
+
+      async function fetchRemoteJSON(url) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+        try {
+          const res = await fetch(url, {
+            cache: "default",
+            signal: controller.signal,
+            headers: { Accept: "application/json" },
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      function readCache(key, ttlMs = CACHE_TTL_MS) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== "object") return null;
+          const age = Date.now() - Number(parsed.ts || 0);
+          if (age > ttlMs) return null;
+          return parsed.data;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function writeCache(key, data) {
+        try {
+          localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+        } catch (_) {}
+      }
+
+      async function refreshGalleryCache() {
+        try {
+          const remote = await fetchRemoteJSON(`${API_URL}?mode=gallery`);
+          const normalized = normalizeGalleryList(remote);
+          if (normalized.length > 0) writeCache(CACHE_KEY_GALLERY, normalized);
+        } catch (_) {}
+      }
+
+      async function loadGallery() {
+        const cached = normalizeGalleryList(readCache(CACHE_KEY_GALLERY));
+        if (cached.length > 0) {
+          sourceEl.textContent = "Sumber data: cache Google Sheet";
+          refreshGalleryCache();
+          return cached;
+        }
+
+        try {
+          const remote = await fetchRemoteJSON(`${API_URL}?mode=gallery`);
+          const normalized = normalizeGalleryList(remote);
+          if (normalized.length > 0) {
+            writeCache(CACHE_KEY_GALLERY, normalized);
+            sourceEl.textContent = "Sumber data: Google Sheet";
+            return normalized;
+          }
+        } catch (err) {
+          console.warn("Load gallery dari Google Sheet gagal:", err);
+        }
+
+        sourceEl.textContent = "Sumber data: dummy lokal (fallback)";
+        return makeDummyItems();
+      }
 
       function openPreview(item) {
         previewImgEl.src = item.image;
@@ -349,20 +519,55 @@
         modalEl.classList.remove("is-open");
       }
 
-      items.forEach((item) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "gallery-item";
-        button.setAttribute("aria-label", `Lihat detail ${item.title}`);
-        button.innerHTML = `<img src="${item.image}" alt="${item.title}" loading="lazy" decoding="async" />`;
-        button.addEventListener("click", () => openPreview(item));
-        gridEl.appendChild(button);
-      });
+      function renderGallery(items) {
+        gridEl.innerHTML = "";
+        items.forEach((item) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "gallery-item";
+          button.setAttribute("aria-label", `Lihat detail ${item.title}`);
+
+          const imageEl = document.createElement("img");
+          imageEl.src = item.image;
+          imageEl.alt = item.title;
+          imageEl.loading = "lazy";
+          imageEl.decoding = "async";
+
+          button.appendChild(imageEl);
+          button.addEventListener("click", () => openPreview(item));
+          gridEl.appendChild(button);
+        });
+      }
+
+      function updateLoadMoreButton() {
+        const hasMore = visibleCount < allItems.length;
+        loadMoreBtn.classList.toggle("hidden", !hasMore);
+      }
+
+      function renderNextPage() {
+        visibleCount = Math.min(visibleCount + PAGE_SIZE, allItems.length);
+        renderGallery(allItems.slice(0, visibleCount));
+        updateLoadMoreButton();
+      }
 
       closeEl.addEventListener("click", closePreview);
       modalEl.addEventListener("click", (event) => {
         if (event.target === modalEl) closePreview();
       });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closePreview();
+      });
+
+      loadMoreBtn.addEventListener("click", renderNextPage);
+
+      async function main() {
+        allItems = await loadGallery();
+        visibleCount = 0;
+        renderNextPage();
+      }
+
+      main();
     </script>
     <script src="assets/pwa.js" defer></script>
   </body>
