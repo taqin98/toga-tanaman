@@ -133,11 +133,6 @@ function doGet(e) {
   const mode = (params.mode || "").trim();
 
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-
-  if (mode === "gallery") {
-    return output_(callback, getGallery_(ss));
-  }
-
   const sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) return output_(callback, { error: `Sheet "${SHEET_NAME}" tidak ditemukan.` });
 
@@ -165,6 +160,11 @@ function doGet(e) {
     })));
   }
 
+  if (mode === "gallery") {
+    return output_(callback, getGallery_(ss));
+  }
+
+
   const out = {};
   data.forEach(d => out[String(d.id).trim()] = normalizePlant_(d));
   return output_(callback, out);
@@ -184,6 +184,30 @@ function output_(callback, obj) {
   return ContentService
     .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getGallery_(ss) {
+  const gallerySheet = ss.getSheetByName("Galleries");
+  if (!gallerySheet) return [];
+
+  const values = gallerySheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const rows = values.slice(1);
+
+  return rows
+    .map(r => rowToObj_(headers, r))
+    .filter(o => String(o.image || "").trim())
+    .map((o, i) => ({
+      id: String(o.id || `gallery-${i + 1}`).trim(),
+      title: String(o.title || "").trim(),
+      image: String(o.image || "").trim(),
+      date: String(o.date || "").trim(),
+      location: String(o.location || "").trim(),
+      person: String(o.person || "").trim(),
+      desc: String(o.desc || "").trim()
+    }));
 }
 
 function rowToObj_(headers, row) {
@@ -223,29 +247,6 @@ function jsonCORS_(obj) {
   out.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   out.setHeader("Access-Control-Allow-Headers", "Content-Type");
   return out;
-}
-
-function getGallery_(ss) {
-  const gallerySheet = ss.getSheetByName("Galleries");
-  if (!gallerySheet) return [];
-
-  const values = gallerySheet.getDataRange().getValues();
-  if (values.length < 2) return [];
-
-  const headers = values[0].map(h => String(h).trim());
-  const rows = values.slice(1);
-  return rows
-    .map(r => rowToObj_(headers, r))
-    .filter(o => String(o.image || "").trim())
-    .map((o, i) => ({
-      id: String(o.id || `gallery-${i + 1}`).trim(),
-      title: String(o.title || "").trim(),
-      image: String(o.image || "").trim(),
-      date: String(o.date || "").trim(),
-      location: String(o.location || "").trim(),
-      person: String(o.person || "").trim(),
-      desc: String(o.desc || "").trim()
-    }));
 }
 ```
 

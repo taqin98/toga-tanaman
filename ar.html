@@ -9,11 +9,13 @@
     <title>AR TOGA</title>
     <meta name="theme-color" content="#1f7a3e" />
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TOGA AR" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/icons/icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+    <link rel="apple-touch-startup-image" href="assets/screenshots/install-mobile.png" />
 
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -50,6 +52,9 @@
         font-weight: 800;
         border: 1px solid rgba(255, 255, 255, 0.25);
         display: none;
+      }
+      .btn-back {
+        background: rgba(7, 27, 29, 0.7);
       }
       .debug-panel {
         position: fixed;
@@ -95,6 +100,7 @@
 
   <body>
     <div class="hud" id="hud">AR TOGA • Arahkan kamera ke marker pattern</div>
+    <a class="btn btn-back" id="btnBack" href="./">Kembali</a>
     <a class="btn" id="btnDetail" href="#" target="_blank" rel="noopener"
       >Detail tanaman</a
     >
@@ -161,6 +167,7 @@
         new URLSearchParams(window.location.search).get("debug") === "1";
 
       const hud = document.getElementById("hud");
+      const btnBack = document.getElementById("btnBack");
       const btn = document.getElementById("btnDetail");
       const root = document.getElementById("root");
 
@@ -177,6 +184,8 @@
       const lostTimers = new Map();
       const plantById = new Map();
       const debugEvents = [];
+
+      updateActiveUI();
 
       function logDebug(event, payload = {}) {
         if (!DEBUG_MODE) return;
@@ -280,12 +289,14 @@
         if (!top) {
           hud.textContent = "AR TOGA • Arahkan kamera ke marker pattern";
           btn.style.display = "none";
+          btnBack.style.display = "block";
           btn.href = "#";
           btn.textContent = "Detail tanaman";
           return;
         }
 
         hud.textContent = `Marker terdeteksi: ${top.nama}`;
+        btnBack.style.display = "none";
         btn.href = top.detailUrl;
         btn.textContent = `Detail ${top.nama}`;
         btn.style.display = "block";
