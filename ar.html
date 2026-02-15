@@ -152,6 +152,7 @@
       const FETCH_TIMEOUT_MS = 12000;
       const CACHE_TTL_MS = 10 * 60 * 1000;
       const CACHE_KEY_LIST = "toga:plants:list:v1";
+      const CACHE_KEY_AR_LIST = "toga:ar:plants:full:v1";
 
       const PLACEHOLDER_SVG_DATA =
         "data:image/svg+xml;utf8," +
@@ -480,30 +481,31 @@
       }
 
       async function loadPlants() {
-        const cached = readCache(CACHE_KEY_LIST);
+        const cached = readCache(CACHE_KEY_AR_LIST);
         const cachedPlants = Array.isArray(cached)
           ? cached
           : Object.values(cached || {});
         if (cachedPlants.length > 0) {
-          fetchJSON(`${API_URL}?mode=list`)
+          // AR butuh field manfaat/cara/catatan, jadi ambil dataset full.
+          fetchJSON(`${API_URL}`)
             .then((dataset) => {
               const plants = Array.isArray(dataset)
                 ? dataset
                 : Object.values(dataset || {});
-              if (plants.length > 0) writeCache(CACHE_KEY_LIST, plants);
+              if (plants.length > 0) writeCache(CACHE_KEY_AR_LIST, plants);
             })
             .catch(() => {});
           return cachedPlants;
         }
 
-        // Samakan dengan app.js: mode=list
+        // AR mode: ambil data full agar text manfaat bisa tampil.
         try {
-          const dataset = await fetchJSON(`${API_URL}?mode=list`);
+          const dataset = await fetchJSON(`${API_URL}`);
           const plants = Array.isArray(dataset)
             ? dataset
             : Object.values(dataset || {});
           if (plants.length > 0) {
-            writeCache(CACHE_KEY_LIST, plants);
+            writeCache(CACHE_KEY_AR_LIST, plants);
             return plants;
           }
         } catch (error) {
