@@ -335,6 +335,59 @@ Contoh:
 - Pastikan pencahayaan cukup saat scanning.
 - Gunakan marker yang dicetak tajam dan tidak blur untuk akurasi deteksi.
 
+## Otomatisasi Generate QR + .patt (GitHub Pages Friendly)
+Untuk menggantikan proses manual upload ke generator AR.js, tersedia script otomatis:
+- Ambil data tanaman dari Google Apps Script
+- Gunakan `url_qr` (jika ada) atau fallback `detail-base?id=<id>`
+- Generate QR PNG dari API QR server
+- Konversi otomatis ke file pattern `.patt`
+- Simpan hasil ke:
+  - `markers/<id>_v2.patt`
+  - `markers/qr/<id>.png`
+
+### Setup Lokal
+```bash
+npm install
+```
+
+### Generate Semua Marker
+```bash
+npm run markers:generate
+```
+
+### Generate ID Tertentu
+```bash
+npm run markers:generate -- --ids kunyit,kangkung
+```
+
+### Opsi Penting
+```bash
+npm run markers:generate -- \
+  --api-url "https://<WEB_APP_URL>/exec" \
+  --detail-base "https://taqin98.github.io/toga-tanaman/" \
+  --qr-size 512
+```
+
+Output report:
+- `markers/qr/report.json`
+
+Catatan:
+- Script ini dijalankan saat build/dev (lokal atau CI), bukan saat runtime browser.
+- Hasil akhirnya file statis, jadi tetap kompatibel penuh dengan GitHub Pages (tanpa SSR/PHP/Python/Node server).
+
+### Otomatisasi via GitHub Actions
+Workflow sudah disediakan:
+- `.github/workflows/generate-markers.yml`
+
+Cara pakai:
+1. Buka tab **Actions** -> **Generate AR Markers**
+2. Klik **Run workflow** (opsional isi input `ids`)
+3. Workflow akan generate file marker + QR, lalu commit otomatis ke repo
+
+Repo Variables yang bisa dipakai:
+- `TOGA_API_URL` (opsional)
+- `TOGA_DETAIL_BASE` (opsional)
+
 ## Catatan PWA
 - Manifest: `manifest.webmanifest`
 - Registrasi SW: `assets/pwa.js`

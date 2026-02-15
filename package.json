@@ -1,0 +1,11 @@
+{
+  "name": "toga-tanaman-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "markers:generate": "node scripts/generate-ar-markers.mjs"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0"
+  }
+}
