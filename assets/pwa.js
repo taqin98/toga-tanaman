@@ -1,4 +1,5 @@
 (function () {
+  const SPLASH_SESSION_KEY = "toga:splash:shown";
   const isInstalledApp = () =>
     (typeof window.matchMedia === "function" &&
       window.matchMedia("(display-mode: standalone)").matches) ||
@@ -8,7 +9,21 @@
   const splashShownAt = Date.now();
   let splashHidden = false;
 
-  if (isInstalledApp()) {
+  const isSplashAlreadyShown = () => {
+    try {
+      return sessionStorage.getItem(SPLASH_SESSION_KEY) === "1";
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const markSplashShown = () => {
+    try {
+      sessionStorage.setItem(SPLASH_SESSION_KEY, "1");
+    } catch (_) {}
+  };
+
+  if (isInstalledApp() && !isSplashAlreadyShown()) {
     let splashStyle = null;
     const existingSplash = document.getElementById("pwaBootSplash");
     const splashEl = existingSplash || document.createElement("div");
@@ -96,6 +111,7 @@
     const hideSplash = () => {
       if (splashHidden) return;
       splashHidden = true;
+      markSplashShown();
       splashEl.classList.add("is-hide");
       setTimeout(() => {
         splashEl.remove();
@@ -104,7 +120,7 @@
     };
 
     window.addEventListener("load", () => {
-      const minVisibleMs = 3000;
+      const minVisibleMs = 2000;
       const waitMs = Math.max(0, minVisibleMs - (Date.now() - splashShownAt));
       setTimeout(hideSplash, waitMs);
     });
