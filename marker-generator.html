@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QR ke AR Marker Generator</title>
+  <style>
+    :root {
+      --bg: #f3f5f7;
+      --card: #ffffff;
+      --text: #101418;
+      --muted: #5b6670;
+      --line: #d9e0e7;
+      --brand: #0f766e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 8px;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input[type="text"],
+    input[type="number"],
+    input[type="file"] {
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+    }
+    input[type="color"] {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 0;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #e7ecef;
+      color: #14212c;
+    }
+    button.primary {
+      background: var(--brand);
+      color: #fff;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .preview {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fcfdff;
+    }
+    .panel h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+    .preview-box {
+      background: #f4f7fa;
+      border-radius: 8px;
+      overflow: auto;
+      text-align: center;
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+    .preview-box img, .preview-box canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    .status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 20px;
+    }
+    @media (max-width: 780px) {
+      .grid, .preview { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>QR ke AR Marker (.patt)</h1>
+      <p>Upload gambar QR, lalu generate file marker PNG dan pattern <code>.patt</code> kompatibel AR.js.</p>
+    </section>
+
+    <section class="card">
+      <div class="grid">
+        <div>
+          <label for="fileInput">Gambar QR</label>
+          <input id="fileInput" type="file" accept="image/*" />
+        </div>
+        <div>
+          <label for="markerId">Nama file output (tanpa ekstensi)</label>
+          <input id="markerId" type="text" value="marker" />
+        </div>
+        <div>
+          <label for="patternRatio">Pattern Ratio (default AR.js 0.52)</label>
+          <input id="patternRatio" type="number" min="0.1" max="0.9" step="0.01" value="0.52" />
+        </div>
+        <div>
+          <label for="imageSize">Image size (px)</label>
+          <input id="imageSize" type="number" min="200" max="2000" step="10" value="600" />
+        </div>
+        <div>
+          <label for="borderColor">Border color</label>
+          <input id="borderColor" type="color" value="#000000" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnGenerate" class="primary">Generate</button>
+        <button id="btnDownloadMarker" disabled>Download Marker PNG</button>
+        <button id="btnDownloadPatt" disabled>Download .patt</button>
+      </div>
+      <div class="status" id="statusText"></div>
+    </section>
+
+    <section class="card preview">
+      <div class="panel">
+        <h3>Preview Input</h3>
+        <div class="preview-box" id="inputPreview"></div>
+      </div>
+      <div class="panel">
+        <h3>Preview Marker Output</h3>
+        <div class="preview-box" id="markerPreview"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const markerIdInput = document.getElementById("markerId");
+    const patternRatioInput = document.getElementById("patternRatio");
+    const imageSizeInput = document.getElementById("imageSize");
+    const borderColorInput = document.getElementById("borderColor");
+    const btnGenerate = document.getElementById("btnGenerate");
+    const btnDownloadMarker = document.getElementById("btnDownloadMarker");
+    const btnDownloadPatt = document.getElementById("btnDownloadPatt");
+    const inputPreview = document.getElementById("inputPreview");
+    const markerPreview = document.getElementById("markerPreview");
+    const statusText = document.getElementById("statusText");
+
+    let sourceImage = null;
+    let outputCanvas = null;
+    let outputPatt = "";
+
+    function setStatus(text) {
+      statusText.textContent = text || "";
+    }
+
+    function toHexColor(hex) {
+      const clean = String(hex || "#000000").trim();
+      return /^#[0-9a-fA-F]{6}$/.test(clean) ? clean : "#000000";
+    }
+
+    function parseColorToRgb(hex) {
+      const c = toHexColor(hex).slice(1);
+      return {
+        r: parseInt(c.slice(0, 2), 16),
+        g: parseInt(c.slice(2, 4), 16),
+        b: parseInt(c.slice(4, 6), 16),
+      };
+    }
+
+    function mapRotation(rotation, x, y) {
+      if (rotation === 0) return [x, y];
+      if (rotation === 1) return [15 - y, x];
+      if (rotation === 2) return [15 - x, 15 - y];
+      return [y, 15 - x];
+    }
+
+    function generatePattFromCanvas(canvas) {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let out = "";
+
+      for (const channel of [2, 1, 0]) {
+        for (let rotation = 0; rotation < 4; rotation += 1) {
+          for (let y = 0; y < 16; y += 1) {
+            const row = [];
+            for (let x = 0; x < 16; x += 1) {
+              const [rx, ry] = mapRotation(rotation, x, y);
+              const sx = Math.max(
+                0,
+                Math.min(canvas.width - 1, Math.floor(((rx + 0.5) * canvas.width) / 16))
+              );
+              const sy = Math.max(
+                0,
+                Math.min(canvas.height - 1, Math.floor(((ry + 0.5) * canvas.height) / 16))
+              );
+              const idx = (sy * canvas.width + sx) * 4 + channel;
+              row.push(String(imageData[idx]).padStart(3, " "));
+            }
+            out += `${row.join(" ")}\n`;
+          }
+        }
+      }
+      return out;
+    }
+
+    function renderInputPreview(file, image) {
+      inputPreview.innerHTML = "";
+      const img = new Image();
+      img.alt = file.name;
+      img.src = image.src;
+      inputPreview.appendChild(img);
+    }
+
+    function renderMarkerPreview(canvas) {
+      markerPreview.innerHTML = "";
+      markerPreview.appendChild(canvas);
+    }
+
+    function buildMarkerCanvas(image, size, patternRatio, borderRgb) {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = `rgb(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b})`;
+      ctx.fillRect(0, 0, size, size);
+
+      const innerSize = Math.max(1, Math.floor(size * patternRatio));
+      const innerX = Math.floor((size - innerSize) / 2);
+      const innerY = Math.floor((size - innerSize) / 2);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(innerX, innerY, innerSize, innerSize);
+      ctx.drawImage(image, innerX, innerY, innerSize, innerSize);
+
+      return canvas;
+    }
+
+    function downloadBlob(filename, blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function safeFileBase() {
+      return (markerIdInput.value || "marker")
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .replace(/_+/g, "_");
+    }
+
+    fileInput.addEventListener("change", () => {
+      outputCanvas = null;
+      outputPatt = "";
+      btnDownloadMarker.disabled = true;
+      btnDownloadPatt.disabled = true;
+      markerPreview.innerHTML = "";
+
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        sourceImage = null;
+        inputPreview.innerHTML = "";
+        setStatus("");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          sourceImage = img;
+          renderInputPreview(file, img);
+          setStatus("Gambar siap. Klik Generate.");
+        };
+        img.onerror = () => {
+          sourceImage = null;
+          setStatus("Gagal membaca gambar.");
+        };
+        img.src = String(reader.result || "");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    btnGenerate.addEventListener("click", () => {
+      if (!sourceImage) {
+        setStatus("Pilih gambar QR terlebih dahulu.");
+        return;
+      }
+
+      const patternRatio = Number(patternRatioInput.value);
+      const imageSize = Number(imageSizeInput.value);
+      if (!Number.isFinite(patternRatio) || patternRatio <= 0 || patternRatio >= 1) {
+        setStatus("Pattern Ratio harus di antara 0 dan 1.");
+        return;
+      }
+      if (!Number.isFinite(imageSize) || imageSize < 200) {
+        setStatus("Image size minimal 200.");
+        return;
+      }
+
+      const borderRgb = parseColorToRgb(borderColorInput.value);
+      const canvas = buildMarkerCanvas(sourceImage, Math.floor(imageSize), patternRatio, borderRgb);
+      const patt = generatePattFromCanvas(canvas);
+
+      outputCanvas = canvas;
+      outputPatt = patt;
+      renderMarkerPreview(canvas);
+      btnDownloadMarker.disabled = false;
+      btnDownloadPatt.disabled = false;
+      setStatus("Generate selesai. Silakan download marker PNG dan .patt.");
+    });
+
+    btnDownloadMarker.addEventListener("click", () => {
+      if (!outputCanvas) return;
+      const base = safeFileBase();
+      outputCanvas.toBlob((blob) => {
+        if (!blob) return;
+        downloadBlob(`${base}-marker.png`, blob);
+      }, "image/png");
+    });
+
+    btnDownloadPatt.addEventListener("click", () => {
+      if (!outputPatt) return;
+      const base = safeFileBase();
+      const blob = new Blob([outputPatt], { type: "text/plain;charset=utf-8" });
+      downloadBlob(`${base}.patt`, blob);
+    });
+  </script>
+</body>
+</html>

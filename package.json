@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "qr:generate": "node scripts/generate-qr-only.mjs",
     "markers:generate": "node scripts/generate-ar-markers.mjs"
   },
   "dependencies": {
