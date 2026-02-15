@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v10.7.5";
+const SW_VERSION = "toga-v10.7.7";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 
@@ -10,6 +10,7 @@ const STATIC_ASSETS = [
   "./profile.html",
   "./manifest.webmanifest",
   "./assets/style.css",
+  "./assets/config.js",
   "./assets/app.js",
   "./assets/pwa.js",
   "./assets/icons/icon-192.png",
