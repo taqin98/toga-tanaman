@@ -20,8 +20,8 @@ const STATIC_ASSETS = [
   "./data/plants.json",
   "./images/kangkung.jpg",
   "./images/kunyit.jpg",
-  "./markers/kangkung_v2.patt",
-  "./markers/kunyit_v2.patt"
+  "./markers/kangkung_v3.patt",
+  "./markers/kunyit_v3.patt"
 ];
 
 self.addEventListener("install", (event) => {

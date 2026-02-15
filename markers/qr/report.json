@@ -5,7 +5,7 @@
     "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkunyit",
     "qr_file": "markers/qr/kunyit.png",
     "marker_file": "markers/qr/kunyit-marker.png",
-    "patt_file": "markers/kunyit_v2.patt",
+    "patt_file": "markers/kunyit_v3.patt",
     "marker_image_size": 600,
     "pattern_ratio": 0.52,
     "border_color": "#000000"
@@ -16,7 +16,7 @@
     "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkangkung",
     "qr_file": "markers/qr/kangkung.png",
     "marker_file": "markers/qr/kangkung-marker.png",
-    "patt_file": "markers/kangkung_v2.patt",
+    "patt_file": "markers/kangkung_v3.patt",
     "marker_image_size": 600,
     "pattern_ratio": 0.52,
     "border_color": "#000000"

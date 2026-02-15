@@ -281,7 +281,7 @@ async function main() {
 
     const qrPath = path.join(args.qrDir, `${id}.png`);
     const markerPath = path.join(args.qrDir, `${id}-marker.png`);
-    const pattPath = path.join(args.markerDir, `${id}_v2.patt`);
+    const pattPath = path.join(args.markerDir, `${id}_v3.patt`);
 
     await writeFile(path.resolve(qrPath), qrBuffer);
     await writeFile(path.resolve(markerPath), markerBuffer);

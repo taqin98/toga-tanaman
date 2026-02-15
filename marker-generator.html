@@ -170,6 +170,9 @@
         <button id="btnGenerate" class="primary">Generate</button>
         <button id="btnDownloadMarker" disabled>Download Marker PNG</button>
         <button id="btnDownloadPatt" disabled>Download .patt</button>
+        <button id="btnPdfOne" disabled>PDF 1/Page</button>
+        <button id="btnPdfTwo" disabled>PDF 2/Page</button>
+        <button id="btnPdfSix" disabled>PDF 6/Page</button>
       </div>
       <div class="status" id="statusText"></div>
     </section>
@@ -186,6 +189,9 @@
     </section>
   </main>
 
+  <script src="assets/vendor/pdfMake/pdfmake.min.js"></script>
+  <script src="assets/vendor/pdfMake/vfs_fonts.js"></script>
+  <script src="assets/vendor/arjs/threex-arpatternfile.js"></script>
   <script>
     const fileInput = document.getElementById("fileInput");
     const markerIdInput = document.getElementById("markerId");
@@ -195,110 +201,34 @@
     const btnGenerate = document.getElementById("btnGenerate");
     const btnDownloadMarker = document.getElementById("btnDownloadMarker");
     const btnDownloadPatt = document.getElementById("btnDownloadPatt");
+    const btnPdfOne = document.getElementById("btnPdfOne");
+    const btnPdfTwo = document.getElementById("btnPdfTwo");
+    const btnPdfSix = document.getElementById("btnPdfSix");
     const inputPreview = document.getElementById("inputPreview");
     const markerPreview = document.getElementById("markerPreview");
     const statusText = document.getElementById("statusText");
 
-    let sourceImage = null;
-    let outputCanvas = null;
-    let outputPatt = "";
+    let innerImageURL = null;
+    let fullMarkerURL = null;
 
     function setStatus(text) {
       statusText.textContent = text || "";
     }
 
-    function toHexColor(hex) {
-      const clean = String(hex || "#000000").trim();
-      return /^#[0-9a-fA-F]{6}$/.test(clean) ? clean : "#000000";
-    }
-
-    function parseColorToRgb(hex) {
-      const c = toHexColor(hex).slice(1);
-      return {
-        r: parseInt(c.slice(0, 2), 16),
-        g: parseInt(c.slice(2, 4), 16),
-        b: parseInt(c.slice(4, 6), 16),
-      };
-    }
-
-    function mapRotation(rotation, x, y) {
-      if (rotation === 0) return [x, y];
-      if (rotation === 1) return [15 - y, x];
-      if (rotation === 2) return [15 - x, 15 - y];
-      return [y, 15 - x];
-    }
-
-    function generatePattFromCanvas(canvas) {
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      let out = "";
-
-      for (const channel of [2, 1, 0]) {
-        for (let rotation = 0; rotation < 4; rotation += 1) {
-          for (let y = 0; y < 16; y += 1) {
-            const row = [];
-            for (let x = 0; x < 16; x += 1) {
-              const [rx, ry] = mapRotation(rotation, x, y);
-              const sx = Math.max(
-                0,
-                Math.min(canvas.width - 1, Math.floor(((rx + 0.5) * canvas.width) / 16))
-              );
-              const sy = Math.max(
-                0,
-                Math.min(canvas.height - 1, Math.floor(((ry + 0.5) * canvas.height) / 16))
-              );
-              const idx = (sy * canvas.width + sx) * 4 + channel;
-              row.push(String(imageData[idx]).padStart(3, " "));
-            }
-            out += `${row.join(" ")}\n`;
-          }
-        }
-      }
-      return out;
-    }
-
-    function renderInputPreview(file, image) {
+    function renderInputPreview(file, srcUrl) {
       inputPreview.innerHTML = "";
       const img = new Image();
       img.alt = file.name;
-      img.src = image.src;
+      img.src = srcUrl;
       inputPreview.appendChild(img);
     }
 
-    function renderMarkerPreview(canvas) {
+    function renderMarkerPreview(srcUrl) {
       markerPreview.innerHTML = "";
-      markerPreview.appendChild(canvas);
-    }
-
-    function buildMarkerCanvas(image, size, patternRatio, borderRgb) {
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-
-      ctx.fillStyle = `rgb(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b})`;
-      ctx.fillRect(0, 0, size, size);
-
-      const innerSize = Math.max(1, Math.floor(size * patternRatio));
-      const innerX = Math.floor((size - innerSize) / 2);
-      const innerY = Math.floor((size - innerSize) / 2);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(innerX, innerY, innerSize, innerSize);
-      ctx.drawImage(image, innerX, innerY, innerSize, innerSize);
-
-      return canvas;
-    }
-
-    function downloadBlob(filename, blob) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      const img = new Image();
+      img.alt = "Marker";
+      img.src = srcUrl;
+      markerPreview.appendChild(img);
     }
 
     function safeFileBase() {
@@ -308,41 +238,32 @@
         .replace(/_+/g, "_");
     }
 
-    fileInput.addEventListener("change", () => {
-      outputCanvas = null;
-      outputPatt = "";
-      btnDownloadMarker.disabled = true;
-      btnDownloadPatt.disabled = true;
-      markerPreview.innerHTML = "";
+    function setDownloadState(enabled) {
+      const disabled = !enabled;
+      btnDownloadMarker.disabled = disabled;
+      btnDownloadPatt.disabled = disabled;
+      btnPdfOne.disabled = disabled;
+      btnPdfTwo.disabled = disabled;
+      btnPdfSix.disabled = disabled;
+    }
 
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) {
-        sourceImage = null;
-        inputPreview.innerHTML = "";
-        setStatus("");
+    function normalizeBorderColor(inputColor) {
+      const value = String(inputColor || "").trim();
+      const test = new Option().style;
+      test.color = value;
+      const isHex = /^#[0-9a-fA-F]{6}$/.test(value);
+      if (!value || (test.color !== value && !isHex)) return "#000000";
+      return value;
+    }
+
+    function updateFullMarkerImage() {
+      if (!innerImageURL) {
+        setStatus("Pilih gambar QR terlebih dahulu.");
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          sourceImage = img;
-          renderInputPreview(file, img);
-          setStatus("Gambar siap. Klik Generate.");
-        };
-        img.onerror = () => {
-          sourceImage = null;
-          setStatus("Gagal membaca gambar.");
-        };
-        img.src = String(reader.result || "");
-      };
-      reader.readAsDataURL(file);
-    });
-
-    btnGenerate.addEventListener("click", () => {
-      if (!sourceImage) {
-        setStatus("Pilih gambar QR terlebih dahulu.");
+      if (!window.THREEx || !THREEx.ArPatternFile) {
+        setStatus("Library THREEx.ArPatternFile tidak ter-load.");
         return;
       }
 
@@ -357,32 +278,107 @@
         return;
       }
 
-      const borderRgb = parseColorToRgb(borderColorInput.value);
-      const canvas = buildMarkerCanvas(sourceImage, Math.floor(imageSize), patternRatio, borderRgb);
-      const patt = generatePattFromCanvas(canvas);
+      const borderColor = normalizeBorderColor(borderColorInput.value);
+      borderColorInput.value = borderColor.startsWith("#") ? borderColor : "#000000";
 
-      outputCanvas = canvas;
-      outputPatt = patt;
-      renderMarkerPreview(canvas);
-      btnDownloadMarker.disabled = false;
-      btnDownloadPatt.disabled = false;
-      setStatus("Generate selesai. Silakan download marker PNG dan .patt.");
+      THREEx.ArPatternFile.buildFullMarker(
+        innerImageURL,
+        patternRatio,
+        Math.floor(imageSize),
+        borderColor,
+        function onComplete(markerUrl) {
+          fullMarkerURL = markerUrl;
+          renderMarkerPreview(markerUrl);
+          setDownloadState(true);
+          setStatus("Generate selesai. Silakan download marker PNG, .patt, atau PDF.");
+        }
+      );
+    }
+
+    function generatePdf(mode) {
+      if (!fullMarkerURL || !window.pdfMake) return;
+
+      let docDefinition;
+      if (mode === 1) {
+        docDefinition = {
+          content: [{ image: fullMarkerURL, width: 600, alignment: "center" }]
+        };
+      } else if (mode === 2) {
+        docDefinition = {
+          content: [
+            { image: fullMarkerURL, width: 300, alignment: "center" },
+            { image: fullMarkerURL, width: 300, alignment: "center" }
+          ]
+        };
+      } else {
+        docDefinition = {
+          content: [
+            { columns: [{ image: fullMarkerURL, width: 250 }, { image: fullMarkerURL, width: 250 }] },
+            { columns: [{ image: fullMarkerURL, width: 250 }, { image: fullMarkerURL, width: 250 }] },
+            { columns: [{ image: fullMarkerURL, width: 250 }, { image: fullMarkerURL, width: 250 }] }
+          ]
+        };
+      }
+      pdfMake.createPdf(docDefinition).open();
+    }
+
+    fileInput.addEventListener("change", () => {
+      innerImageURL = null;
+      fullMarkerURL = null;
+      setDownloadState(false);
+      markerPreview.innerHTML = "";
+
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        inputPreview.innerHTML = "";
+        setStatus("");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        innerImageURL = String(reader.result || "");
+        renderInputPreview(file, innerImageURL);
+        setStatus("Gambar siap. Klik Generate.");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    btnGenerate.addEventListener("click", () => {
+      updateFullMarkerImage();
     });
 
     btnDownloadMarker.addEventListener("click", () => {
-      if (!outputCanvas) return;
+      if (!fullMarkerURL) return;
       const base = safeFileBase();
-      outputCanvas.toBlob((blob) => {
-        if (!blob) return;
-        downloadBlob(`${base}-marker.png`, blob);
-      }, "image/png");
+      const a = document.createElement("a");
+      a.href = fullMarkerURL;
+      a.download = `${base}-marker.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     });
 
     btnDownloadPatt.addEventListener("click", () => {
-      if (!outputPatt) return;
+      if (!innerImageURL) return;
       const base = safeFileBase();
-      const blob = new Blob([outputPatt], { type: "text/plain;charset=utf-8" });
-      downloadBlob(`${base}.patt`, blob);
+      THREEx.ArPatternFile.encodeImageURL(innerImageURL, function onComplete(patternFileString) {
+        THREEx.ArPatternFile.triggerDownload(patternFileString, `${base}.patt`);
+      });
+    });
+
+    btnPdfOne.addEventListener("click", () => generatePdf(1));
+    btnPdfTwo.addEventListener("click", () => generatePdf(2));
+    btnPdfSix.addEventListener("click", () => generatePdf(6));
+
+    patternRatioInput.addEventListener("input", () => {
+      if (innerImageURL) updateFullMarkerImage();
+    });
+    imageSizeInput.addEventListener("input", () => {
+      if (innerImageURL) updateFullMarkerImage();
+    });
+    borderColorInput.addEventListener("input", () => {
+      if (innerImageURL) updateFullMarkerImage();
     });
   </script>
 </body>
