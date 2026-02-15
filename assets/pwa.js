@@ -9,84 +9,89 @@
   let splashHidden = false;
 
   if (isInstalledApp()) {
-    const splashStyle = document.createElement("style");
-    splashStyle.textContent = `
-      .pwa-launch-splash {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(150deg, #10352a, #1f7a3e);
-        color: #f3fbf8;
-        font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-        opacity: 1;
-        transition: opacity 0.32s ease;
-      }
-      .pwa-launch-splash.is-hide {
-        opacity: 0;
-        pointer-events: none;
-      }
-      .pwa-launch-splash__inner {
-        display: grid;
-        justify-items: center;
-        gap: 10px;
-        text-align: center;
-        padding: 18px;
-      }
-      .pwa-launch-splash__logo {
-        width: 72px;
-        height: 72px;
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26);
-        background: rgba(255, 255, 255, 0.16);
-        object-fit: cover;
-        animation: pwaLogoPulse 1.4s ease-in-out infinite;
-      }
-      .pwa-launch-splash__title {
-        font-size: 16px;
-        font-weight: 800;
-        letter-spacing: 0.2px;
-      }
-      .pwa-launch-splash__loading {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 12px;
-        color: rgba(243, 251, 248, 0.92);
-      }
-      .pwa-launch-splash__spinner {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, 0.28);
-        border-top-color: #ffffff;
-        animation: pwaSpin 0.9s linear infinite;
-      }
-      @keyframes pwaSpin {
-        to { transform: rotate(360deg); }
-      }
-      @keyframes pwaLogoPulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.045); }
-      }
-    `;
-    document.head.appendChild(splashStyle);
+    let splashStyle = null;
+    const existingSplash = document.getElementById("pwaBootSplash");
+    const splashEl = existingSplash || document.createElement("div");
 
-    const splashEl = document.createElement("div");
-    splashEl.className = "pwa-launch-splash";
-    splashEl.innerHTML = `
-      <div class="pwa-launch-splash__inner">
-        <img class="pwa-launch-splash__logo" src="assets/icons/icon-192.png" alt="Logo TOGA" />
-        <div class="pwa-launch-splash__title">TOGA RT 09</div>
-        <div class="pwa-launch-splash__loading" aria-live="polite">
-          <span class="pwa-launch-splash__spinner" aria-hidden="true"></span>
-          <span>Memuat aplikasi...</span>
+    if (!existingSplash) {
+      splashStyle = document.createElement("style");
+      splashStyle.textContent = `
+        .pwa-launch-splash {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(150deg, #10352a, #1f7a3e);
+          color: #f3fbf8;
+          font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+          opacity: 1;
+          transition: opacity 0.32s ease;
+        }
+        .pwa-launch-splash.is-hide {
+          opacity: 0;
+          pointer-events: none;
+        }
+        .pwa-launch-splash__inner {
+          display: grid;
+          justify-items: center;
+          gap: 10px;
+          text-align: center;
+          padding: 18px;
+        }
+        .pwa-launch-splash__logo {
+          width: 72px;
+          height: 72px;
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26);
+          background: rgba(255, 255, 255, 0.16);
+          object-fit: cover;
+          animation: pwaLogoPulse 1.4s ease-in-out infinite;
+        }
+        .pwa-launch-splash__title {
+          font-size: 16px;
+          font-weight: 800;
+          letter-spacing: 0.2px;
+        }
+        .pwa-launch-splash__loading {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          color: rgba(243, 251, 248, 0.92);
+        }
+        .pwa-launch-splash__spinner {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          border: 2px solid rgba(255, 255, 255, 0.28);
+          border-top-color: #ffffff;
+          animation: pwaSpin 0.9s linear infinite;
+        }
+        @keyframes pwaSpin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pwaLogoPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.045); }
+        }
+      `;
+      document.head.appendChild(splashStyle);
+
+      splashEl.className = "pwa-launch-splash";
+      splashEl.innerHTML = `
+        <div class="pwa-launch-splash__inner">
+          <img class="pwa-launch-splash__logo" src="assets/icons/icon-192.png" alt="Logo TOGA" />
+          <div class="pwa-launch-splash__title">TOGA RT 09</div>
+          <div class="pwa-launch-splash__loading" aria-live="polite">
+            <span class="pwa-launch-splash__spinner" aria-hidden="true"></span>
+            <span>Memuat aplikasi...</span>
+          </div>
         </div>
-      </div>
-    `;
-    document.body.appendChild(splashEl);
+      `;
+      document.body.appendChild(splashEl);
+    }
 
     const hideSplash = () => {
       if (splashHidden) return;
@@ -94,7 +99,7 @@
       splashEl.classList.add("is-hide");
       setTimeout(() => {
         splashEl.remove();
-        splashStyle.remove();
+        if (splashStyle) splashStyle.remove();
       }, 380);
     };
 

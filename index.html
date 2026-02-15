@@ -18,9 +18,102 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <script>
+    (function () {
+      var installed =
+        (typeof window.matchMedia === "function" &&
+          window.matchMedia("(display-mode: standalone)").matches) ||
+        window.navigator.standalone === true ||
+        document.referrer.indexOf("android-app://") === 0;
+      document.documentElement.classList.add(installed ? "pwa-installed" : "pwa-browser");
+    })();
+  </script>
+  <style>
+    #pwaBootSplash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      place-items: center;
+      background: linear-gradient(150deg, #10352a, #1f7a3e);
+      color: #f3fbf8;
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      opacity: 1;
+      transition: opacity 0.32s ease;
+    }
+    @media (display-mode: standalone) {
+      #pwaBootSplash {
+        display: grid;
+      }
+    }
+    html.pwa-installed #pwaBootSplash {
+      display: grid;
+    }
+    html.pwa-browser #pwaBootSplash {
+      display: none !important;
+    }
+    #pwaBootSplash.is-hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .pwa-launch-splash__inner {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      text-align: center;
+      padding: 18px;
+    }
+    .pwa-launch-splash__logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26);
+      background: rgba(255, 255, 255, 0.16);
+      object-fit: cover;
+      animation: pwaLogoPulse 1.4s ease-in-out infinite;
+    }
+    .pwa-launch-splash__title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+    .pwa-launch-splash__loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: rgba(243, 251, 248, 0.92);
+    }
+    .pwa-launch-splash__spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.28);
+      border-top-color: #ffffff;
+      animation: pwaSpin 0.9s linear infinite;
+    }
+    @keyframes pwaSpin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pwaLogoPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.045); }
+    }
+  </style>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
+  <div id="pwaBootSplash" class="pwa-launch-splash" aria-hidden="true">
+    <div class="pwa-launch-splash__inner">
+      <img class="pwa-launch-splash__logo" src="assets/icons/icon-192.png" alt="Logo TOGA" />
+      <div class="pwa-launch-splash__title">TOGA RT 09</div>
+      <div class="pwa-launch-splash__loading">
+        <span class="pwa-launch-splash__spinner" aria-hidden="true"></span>
+        <span>Memuat aplikasi...</span>
+      </div>
+    </div>
+  </div>
   <header class="topbar">
     <div class="brand">
       <div class="logo">🌿</div>
