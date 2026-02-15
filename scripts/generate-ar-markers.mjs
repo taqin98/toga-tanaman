@@ -10,7 +10,8 @@ const DEFAULT_DETAIL_BASE = "https://taqin98.github.io/toga-tanaman/";
 const DEFAULT_MARKER_DIR = "markers";
 const DEFAULT_QR_DIR = path.join(DEFAULT_MARKER_DIR, "qr");
 const DEFAULT_QR_SIZE = 512;
-const DEFAULT_MARKER_IMAGE_SIZE = 1024;
+const DEFAULT_MARKER_IMAGE_SIZE = 600;
+const DEFAULT_PATTERN_RATIO = 0.52;
 const QR_ENDPOINT = "https://api.qrserver.com/v1/create-qr-code/";
 
 function parseArgs(argv) {
@@ -21,6 +22,7 @@ function parseArgs(argv) {
     qrDir: DEFAULT_QR_DIR,
     qrSize: DEFAULT_QR_SIZE,
     markerImageSize: DEFAULT_MARKER_IMAGE_SIZE,
+    patternRatio: DEFAULT_PATTERN_RATIO,
     ids: null,
   };
 
@@ -76,6 +78,15 @@ function parseArgs(argv) {
       i += 1;
       continue;
     }
+    if (key === "--pattern-ratio" && next) {
+      const parsed = Number(next);
+      if (!Number.isFinite(parsed) || parsed <= 0 || parsed >= 1) {
+        throw new Error(`Nilai --pattern-ratio tidak valid: ${next}`);
+      }
+      out.patternRatio = parsed;
+      i += 1;
+      continue;
+    }
     if (key === "--help") {
       printHelp();
       process.exit(0);
@@ -99,6 +110,7 @@ Options:
   --qr-dir <dir>          Folder output QR PNG (default: ${DEFAULT_QR_DIR})
   --qr-size <number>      Ukuran QR PNG (default: ${DEFAULT_QR_SIZE})
   --marker-image-size <n> Ukuran PNG marker framed (default: ${DEFAULT_MARKER_IMAGE_SIZE})
+  --pattern-ratio <n>     Rasio inner image vs border (default: ${DEFAULT_PATTERN_RATIO})
   --ids <id1,id2,...>     Generate hanya id tertentu
   --help                  Tampilkan bantuan
 `);
@@ -241,38 +253,27 @@ function fillRect(png, x0, y0, w, h, r, g, b, a = 255) {
   }
 }
 
-function buildArFramedMarker(qrPngBuffer, markerImageSize) {
+function buildArFramedMarker(qrPngBuffer, markerImageSize, patternRatio) {
   const qr = PNG.sync.read(qrPngBuffer);
   const size = markerImageSize;
   const png = new PNG({ width: size, height: size });
 
-  // White background.
-  fillRect(png, 0, 0, size, size, 255, 255, 255, 255);
+  // Marker training AR.js style:
+  // black full square + inner image sesuai pattern ratio.
+  fillRect(png, 0, 0, size, size, 0, 0, 0, 255);
 
-  // Layout ratio untuk marker AR yang stabil:
-  // white margin luar -> black border tebal -> white inner margin -> QR.
-  const outerMargin = Math.floor(size * 0.06);
-  const blackOuterSize = size - outerMargin * 2;
-  const borderWidth = Math.floor(blackOuterSize * 0.2);
-  const innerWhiteSize = blackOuterSize - borderWidth * 2;
-  const qrInset = Math.floor(innerWhiteSize * 0.08);
-  const qrSize = innerWhiteSize - qrInset * 2;
-
-  const blackX = outerMargin;
-  const blackY = outerMargin;
-  fillRect(png, blackX, blackY, blackOuterSize, blackOuterSize, 0, 0, 0, 255);
-
-  const whiteX = blackX + borderWidth;
-  const whiteY = blackY + borderWidth;
-  fillRect(png, whiteX, whiteY, innerWhiteSize, innerWhiteSize, 255, 255, 255, 255);
+  const innerSize = Math.max(1, Math.floor(size * patternRatio));
+  const innerX = Math.floor((size - innerSize) / 2);
+  const innerY = Math.floor((size - innerSize) / 2);
+  fillRect(png, innerX, innerY, innerSize, innerSize, 255, 255, 255, 255);
 
   copyResizeNearest(
     qr,
     png,
-    whiteX + qrInset,
-    whiteY + qrInset,
-    qrSize,
-    qrSize
+    innerX,
+    innerY,
+    innerSize,
+    innerSize
   );
 
   return PNG.sync.write(png);
@@ -309,10 +310,7 @@ async function main() {
 
     console.log(`- ${id}: generate QR + .patt`);
     const pngBuffer = await downloadQrPng(detailUrl, args.qrSize);
-    const markerImageBuffer = buildArFramedMarker(
-      pngBuffer,
-      args.markerImageSize
-    );
+    const markerImageBuffer = buildArFramedMarker(pngBuffer, args.markerImageSize, args.patternRatio);
     const pattText = generatePattFromPng(markerImageBuffer);
 
     const qrPath = path.join(args.qrDir, `${id}.png`);

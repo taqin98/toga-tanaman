@@ -356,6 +356,11 @@ npm install
 npm run markers:generate
 ```
 
+Default generator saat ini:
+- `pattern-ratio`: `0.52`
+- `marker-image-size`: `600`
+- border marker: hitam (dark)
+
 ### Generate ID Tertentu
 ```bash
 npm run markers:generate -- --ids kunyit,kangkung
@@ -366,7 +371,9 @@ npm run markers:generate -- --ids kunyit,kangkung
 npm run markers:generate -- \
   --api-url "https://<WEB_APP_URL>/exec" \
   --detail-base "https://taqin98.github.io/toga-tanaman/" \
-  --qr-size 512
+  --qr-size 512 \
+  --pattern-ratio 0.52 \
+  --marker-image-size 600
 ```
 
 Output report:
