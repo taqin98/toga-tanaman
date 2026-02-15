@@ -10,6 +10,7 @@ const DEFAULT_DETAIL_BASE = "https://taqin98.github.io/toga-tanaman/";
 const DEFAULT_MARKER_DIR = "markers";
 const DEFAULT_QR_DIR = path.join(DEFAULT_MARKER_DIR, "qr");
 const DEFAULT_QR_SIZE = 512;
+const DEFAULT_MARKER_IMAGE_SIZE = 1024;
 const QR_ENDPOINT = "https://api.qrserver.com/v1/create-qr-code/";
 
 function parseArgs(argv) {
@@ -19,6 +20,7 @@ function parseArgs(argv) {
     markerDir: DEFAULT_MARKER_DIR,
     qrDir: DEFAULT_QR_DIR,
     qrSize: DEFAULT_QR_SIZE,
+    markerImageSize: DEFAULT_MARKER_IMAGE_SIZE,
     ids: null,
   };
 
@@ -65,6 +67,15 @@ function parseArgs(argv) {
       i += 1;
       continue;
     }
+    if (key === "--marker-image-size" && next) {
+      const parsed = Number(next);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw new Error(`Nilai --marker-image-size tidak valid: ${next}`);
+      }
+      out.markerImageSize = parsed;
+      i += 1;
+      continue;
+    }
     if (key === "--help") {
       printHelp();
       process.exit(0);
@@ -87,6 +98,7 @@ Options:
   --marker-dir <dir>      Folder output .patt (default: ${DEFAULT_MARKER_DIR})
   --qr-dir <dir>          Folder output QR PNG (default: ${DEFAULT_QR_DIR})
   --qr-size <number>      Ukuran QR PNG (default: ${DEFAULT_QR_SIZE})
+  --marker-image-size <n> Ukuran PNG marker framed (default: ${DEFAULT_MARKER_IMAGE_SIZE})
   --ids <id1,id2,...>     Generate hanya id tertentu
   --help                  Tampilkan bantuan
 `);
@@ -179,6 +191,93 @@ function generatePattFromPng(pngBuffer) {
   return out;
 }
 
+function clampByte(v) {
+  return Math.max(0, Math.min(255, Math.round(v)));
+}
+
+function blendOnWhite(channel, alpha) {
+  // channel + alpha (0..255) diblend ke background putih.
+  return clampByte((channel * alpha + 255 * (255 - alpha)) / 255);
+}
+
+function copyResizeNearest(srcPng, dstPng, dstX, dstY, dstW, dstH) {
+  for (let y = 0; y < dstH; y += 1) {
+    for (let x = 0; x < dstW; x += 1) {
+      const sx = Math.min(
+        srcPng.width - 1,
+        Math.floor((x / Math.max(1, dstW)) * srcPng.width)
+      );
+      const sy = Math.min(
+        srcPng.height - 1,
+        Math.floor((y / Math.max(1, dstH)) * srcPng.height)
+      );
+
+      const sIdx = (sy * srcPng.width + sx) * 4;
+      const dIdx = ((dstY + y) * dstPng.width + (dstX + x)) * 4;
+
+      const sa = srcPng.data[sIdx + 3];
+      dstPng.data[dIdx] = blendOnWhite(srcPng.data[sIdx], sa);
+      dstPng.data[dIdx + 1] = blendOnWhite(srcPng.data[sIdx + 1], sa);
+      dstPng.data[dIdx + 2] = blendOnWhite(srcPng.data[sIdx + 2], sa);
+      dstPng.data[dIdx + 3] = 255;
+    }
+  }
+}
+
+function fillRect(png, x0, y0, w, h, r, g, b, a = 255) {
+  const x1 = Math.max(0, Math.min(png.width, x0 + w));
+  const y1 = Math.max(0, Math.min(png.height, y0 + h));
+  const sx = Math.max(0, x0);
+  const sy = Math.max(0, y0);
+
+  for (let y = sy; y < y1; y += 1) {
+    for (let x = sx; x < x1; x += 1) {
+      const idx = (y * png.width + x) * 4;
+      png.data[idx] = r;
+      png.data[idx + 1] = g;
+      png.data[idx + 2] = b;
+      png.data[idx + 3] = a;
+    }
+  }
+}
+
+function buildArFramedMarker(qrPngBuffer, markerImageSize) {
+  const qr = PNG.sync.read(qrPngBuffer);
+  const size = markerImageSize;
+  const png = new PNG({ width: size, height: size });
+
+  // White background.
+  fillRect(png, 0, 0, size, size, 255, 255, 255, 255);
+
+  // Layout ratio untuk marker AR yang stabil:
+  // white margin luar -> black border tebal -> white inner margin -> QR.
+  const outerMargin = Math.floor(size * 0.06);
+  const blackOuterSize = size - outerMargin * 2;
+  const borderWidth = Math.floor(blackOuterSize * 0.2);
+  const innerWhiteSize = blackOuterSize - borderWidth * 2;
+  const qrInset = Math.floor(innerWhiteSize * 0.08);
+  const qrSize = innerWhiteSize - qrInset * 2;
+
+  const blackX = outerMargin;
+  const blackY = outerMargin;
+  fillRect(png, blackX, blackY, blackOuterSize, blackOuterSize, 0, 0, 0, 255);
+
+  const whiteX = blackX + borderWidth;
+  const whiteY = blackY + borderWidth;
+  fillRect(png, whiteX, whiteY, innerWhiteSize, innerWhiteSize, 255, 255, 255, 255);
+
+  copyResizeNearest(
+    qr,
+    png,
+    whiteX + qrInset,
+    whiteY + qrInset,
+    qrSize,
+    qrSize
+  );
+
+  return PNG.sync.write(png);
+}
+
 async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
 }
@@ -210,18 +309,25 @@ async function main() {
 
     console.log(`- ${id}: generate QR + .patt`);
     const pngBuffer = await downloadQrPng(detailUrl, args.qrSize);
-    const pattText = generatePattFromPng(pngBuffer);
+    const markerImageBuffer = buildArFramedMarker(
+      pngBuffer,
+      args.markerImageSize
+    );
+    const pattText = generatePattFromPng(markerImageBuffer);
 
     const qrPath = path.join(args.qrDir, `${id}.png`);
+    const markerImagePath = path.join(args.qrDir, `${id}-marker.png`);
     const pattPath = path.join(args.markerDir, `${id}_v2.patt`);
 
     await fs.writeFile(qrPath, pngBuffer);
+    await fs.writeFile(markerImagePath, markerImageBuffer);
     await fs.writeFile(pattPath, pattText, "utf8");
 
     report.push({
       id,
       detail_url: detailUrl,
       qr_file: qrPath,
+      marker_file: markerImagePath,
       patt_file: pattPath,
     });
   }

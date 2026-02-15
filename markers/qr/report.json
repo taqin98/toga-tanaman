@@ -3,12 +3,14 @@
     "id": "kunyit",
     "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kunyit",
     "qr_file": "markers/qr/kunyit.png",
+    "marker_file": "markers/qr/kunyit-marker.png",
     "patt_file": "markers/kunyit_v2.patt"
   },
   {
     "id": "kangkung",
     "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kangkung",
     "qr_file": "markers/qr/kangkung.png",
+    "marker_file": "markers/qr/kangkung-marker.png",
     "patt_file": "markers/kangkung_v2.patt"
   }
 ]

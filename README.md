@@ -344,6 +344,7 @@ Untuk menggantikan proses manual upload ke generator AR.js, tersedia script otom
 - Simpan hasil ke:
   - `markers/<id>_v2.patt`
   - `markers/qr/<id>.png`
+  - `markers/qr/<id>-marker.png` (marker dengan border hitam besar, siap cetak/scan)
 
 ### Setup Lokal
 ```bash
@@ -374,6 +375,7 @@ Output report:
 Catatan:
 - Script ini dijalankan saat build/dev (lokal atau CI), bukan saat runtime browser.
 - Hasil akhirnya file statis, jadi tetap kompatibel penuh dengan GitHub Pages (tanpa SSR/PHP/Python/Node server).
+- File `.patt` di-generate dari gambar marker framed (`*-marker.png`), bukan dari QR mentah, supaya tracking AR lebih stabil.
 
 ### Otomatisasi via GitHub Actions
 Workflow sudah disediakan:
