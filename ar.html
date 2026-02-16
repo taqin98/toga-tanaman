@@ -30,8 +30,11 @@
           if (!isInternalNav) {
             sessionStorage.removeItem(splashKey);
           }
-          if (sessionStorage.getItem(splashKey) === "1") {
+          var splashShown = sessionStorage.getItem(splashKey) === "1";
+          if (splashShown) {
             document.documentElement.classList.add("pwa-splash-skip");
+          } else if (installed) {
+            document.documentElement.classList.add("pwa-launch-pending");
           }
         } catch (_) {}
       })();
@@ -70,6 +73,9 @@
       }
       html.pwa-browser #pwaBootSplash {
         display: none !important;
+      }
+      html.pwa-launch-pending body > :not(#pwaBootSplash) {
+        visibility: hidden;
       }
       #pwaBootSplash.is-hide {
         opacity: 0;

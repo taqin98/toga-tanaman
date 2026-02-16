@@ -1,5 +1,6 @@
 (function () {
   const SPLASH_SESSION_KEY = "toga:splash:shown";
+  const rootEl = document.documentElement;
   const isInstalledApp = () =>
     (typeof window.matchMedia === "function" &&
       window.matchMedia("(display-mode: standalone)").matches) ||
@@ -23,7 +24,13 @@
     } catch (_) {}
   };
 
-  if (isInstalledApp() && !isSplashAlreadyShown()) {
+  const shouldShowSplash = isInstalledApp() && !isSplashAlreadyShown();
+  if (!shouldShowSplash) {
+    rootEl.classList.remove("pwa-launch-pending");
+  }
+
+  if (shouldShowSplash) {
+    rootEl.classList.add("pwa-launch-pending");
     // Tandai sejak splash ditampilkan agar dalam sesi yang sama tidak tampil lagi.
     markSplashShown();
     let splashStyle = null;
@@ -117,6 +124,7 @@
       setTimeout(() => {
         splashEl.remove();
         if (splashStyle) splashStyle.remove();
+        rootEl.classList.remove("pwa-launch-pending");
       }, 380);
     };
 
