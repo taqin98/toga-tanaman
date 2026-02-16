@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v10.7.13";
+const SW_VERSION = "toga-v10.7.14";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 
@@ -62,8 +62,14 @@ self.addEventListener("fetch", (event) => {
 });
 
 async function handleNavigation(request) {
+  const cached = await caches.match(request, { ignoreSearch: true });
+  if (cached) return cached;
+
   try {
-    return await fetch(request);
+    const response = await fetch(request);
+    const cache = await caches.open(RUNTIME_CACHE);
+    cache.put(request, response.clone());
+    return response;
   } catch (_) {
     const cached = await caches.match("./index.html");
     if (cached) return cached;
