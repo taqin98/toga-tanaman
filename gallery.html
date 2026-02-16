@@ -26,6 +26,10 @@
           document.referrer.indexOf("android-app://") === 0;
         document.documentElement.classList.add(installed ? "pwa-installed" : "pwa-browser");
         try {
+          var isInternalNav = document.referrer.indexOf(window.location.origin) === 0;
+          if (!isInternalNav) {
+            sessionStorage.removeItem(splashKey);
+          }
           if (sessionStorage.getItem(splashKey) === "1") {
             document.documentElement.classList.add("pwa-splash-skip");
           }
