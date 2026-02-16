@@ -27,10 +27,12 @@
   const shouldShowSplash = isInstalledApp() && !isSplashAlreadyShown();
   if (!shouldShowSplash) {
     rootEl.classList.remove("pwa-launch-pending");
+    rootEl.classList.add("pwa-launch-ready");
   }
 
   if (shouldShowSplash) {
     rootEl.classList.add("pwa-launch-pending");
+    rootEl.classList.remove("pwa-launch-ready");
     // Tandai sejak splash ditampilkan agar dalam sesi yang sama tidak tampil lagi.
     markSplashShown();
     let splashStyle = null;
@@ -125,6 +127,7 @@
         splashEl.remove();
         if (splashStyle) splashStyle.remove();
         rootEl.classList.remove("pwa-launch-pending");
+        rootEl.classList.add("pwa-launch-ready");
       }, 380);
     };
 

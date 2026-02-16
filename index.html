@@ -26,7 +26,12 @@
           window.matchMedia("(display-mode: standalone)").matches) ||
         window.navigator.standalone === true ||
         document.referrer.indexOf("android-app://") === 0;
+      var ua = window.navigator.userAgent || "";
+      var isiOS = /iphone|ipad|ipod/i.test(ua);
       document.documentElement.classList.add(installed ? "pwa-installed" : "pwa-browser");
+      if (isiOS) {
+        document.documentElement.classList.add("ios-webkit");
+      }
       try {
         var isInternalNav = document.referrer.indexOf(window.location.origin) === 0;
         if (!isInternalNav) {
@@ -72,8 +77,17 @@
     html.pwa-browser #pwaBootSplash {
       display: none !important;
     }
+    html.pwa-launch-pending #pwaBootSplash {
+      display: grid !important;
+      opacity: 1 !important;
+    }
     html.pwa-launch-pending body > :not(#pwaBootSplash) {
       visibility: hidden;
+    }
+    html.ios-webkit.pwa-launch-pending body > :not(#pwaBootSplash),
+    html.ios-webkit.pwa-launch-pending body > :not(#pwaBootSplash) * {
+      animation: none !important;
+      transition: none !important;
     }
     #pwaBootSplash.is-hide {
       opacity: 0;
