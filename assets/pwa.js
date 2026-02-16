@@ -24,6 +24,8 @@
   };
 
   if (isInstalledApp() && !isSplashAlreadyShown()) {
+    // Tandai sejak splash ditampilkan agar dalam sesi yang sama tidak tampil lagi.
+    markSplashShown();
     let splashStyle = null;
     const existingSplash = document.getElementById("pwaBootSplash");
     const splashEl = existingSplash || document.createElement("div");
@@ -111,7 +113,6 @@
     const hideSplash = () => {
       if (splashHidden) return;
       splashHidden = true;
-      markSplashShown();
       splashEl.classList.add("is-hide");
       setTimeout(() => {
         splashEl.remove();
