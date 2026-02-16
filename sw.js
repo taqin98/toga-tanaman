@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v10.7.15";
+const SW_VERSION = "toga-v10.7.16";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 
@@ -62,19 +62,35 @@ self.addEventListener("fetch", (event) => {
 });
 
 async function handleNavigation(request) {
-  const cached = await caches.match(request, { ignoreSearch: true });
+  const staticCache = await caches.open(STATIC_CACHE);
+  const staticAsset = resolveNavigationAsset(request.url);
+  const cached = await staticCache.match(staticAsset);
   if (cached) return cached;
 
   try {
-    const response = await fetch(request);
-    const cache = await caches.open(RUNTIME_CACHE);
-    cache.put(request, response.clone());
-    return response;
+    return await fetch(request, { cache: "no-cache" });
   } catch (_) {
-    const cached = await caches.match("./index.html");
-    if (cached) return cached;
+    const fallback = await staticCache.match("./index.html");
+    if (fallback) return fallback;
     throw _;
   }
+}
+
+function resolveNavigationAsset(requestUrl) {
+  const url = new URL(requestUrl);
+  const scopePath = new URL(self.registration.scope).pathname;
+  let relativePath = url.pathname;
+
+  if (relativePath.startsWith(scopePath)) {
+    relativePath = relativePath.slice(scopePath.length);
+  }
+
+  const path = relativePath.replace(/^\/+/, "");
+  if (path === "" || path === "index.html") return "./index.html";
+  if (path === "gallery.html") return "./gallery.html";
+  if (path === "ar.html") return "./ar.html";
+  if (path === "profile.html") return "./profile.html";
+  return "./index.html";
 }
 
 async function precacheStaticAssets() {
