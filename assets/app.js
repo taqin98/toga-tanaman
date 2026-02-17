@@ -255,7 +255,6 @@ function renderList(items, mode = "reset") {
   const loadMoreActions = $("loadMoreActions");
   const loadMoreBtn = $("loadMoreBtn");
   const loadMoreDone = $("loadMoreDone");
-  const compactMode = LIST_STATE.view === "compact";
   const totalItems = items.length;
   const visibleItems = items.slice(0, visiblePlantsCount);
   const hasMore = visibleItems.length < totalItems;
@@ -265,7 +264,8 @@ function renderList(items, mode = "reset") {
     lastRenderedCount = 0;
   }
 
-  listWrap.classList.toggle("compact", compactMode);
+  listWrap.classList.toggle("gallery", LIST_STATE.view === "grid");
+  listWrap.classList.toggle("list", LIST_STATE.view === "list");
 
   visibleItems.forEach((item, index) => {
     if (index < lastRenderedCount) return;
@@ -357,8 +357,8 @@ function setupLoadMoreObserver() {
 }
 
 function updateViewToggle() {
-  $("viewCard").classList.toggle("is-active", LIST_STATE.view === "grid");
-  $("viewCompact").classList.toggle("is-active", LIST_STATE.view === "compact");
+  $("viewGrid").classList.toggle("is-active", LIST_STATE.view === "grid");
+  $("viewList").classList.toggle("is-active", LIST_STATE.view === "list");
 }
 
 function getJenisOptions(plants) {
@@ -404,8 +404,8 @@ function getFilteredPlants(plants) {
 function setupListInteractions(plants) {
   const input = $("searchInput");
   const jenisWrap = $("jenisFilters");
-  const viewCard = $("viewCard");
-  const viewCompact = $("viewCompact");
+  const viewGrid = $("viewGrid");
+  const viewList = $("viewList");
   const loadMoreBtn = $("loadMoreBtn");
   const jenisOptions = getJenisOptions(plants);
 
@@ -432,14 +432,14 @@ function setupListInteractions(plants) {
     applyFilter();
   });
 
-  viewCard.addEventListener("click", () => {
+  viewGrid.addEventListener("click", () => {
     LIST_STATE.view = "grid";
     updateViewToggle();
     renderList(filteredPlantsCache, "reset");
   });
 
-  viewCompact.addEventListener("click", () => {
-    LIST_STATE.view = "compact";
+  viewList.addEventListener("click", () => {
+    LIST_STATE.view = "list";
     updateViewToggle();
     renderList(filteredPlantsCache, "reset");
   });
