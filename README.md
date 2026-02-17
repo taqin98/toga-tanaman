@@ -78,10 +78,10 @@ Proyek ini menggunakan Google Apps Script sebagai JSON API dari Google Sheets.
 - Spreadsheet ID: `17BjGxtalow56mIflBtT_DihH1jJQo96r5Uur1ozZF9E`
 - Sheet name: `Plants`
 - Susunan kolom:
-  - `id,nama,nama_latin,jenis,gambar,manfaat,cara_pakai,catatan,url_qr,gr_img`
+  - `id,nama,nama_latin,jenis,gambar,manfaat,deskripsi,catatan,url_qr,gr_img`
 
 Kolom yang dibaca API utama:
-- `id,nama,nama_latin,jenis,gambar,manfaat,cara_pakai,catatan`
+- `id,nama,nama_latin,jenis,gambar,manfaat,deskripsi,catatan`
 
 Kolom tambahan spreadsheet:
 - `url_qr`
@@ -95,9 +95,15 @@ Untuk data galeri, tambahkan sheet baru:
 Contoh isi row `Galleries`:
 - `gal-001,Kerja Bakti TOGA,https://images.unsplash.com/... ,2026-02-10,Kebun RT 09,Ibu PKK,Perawatan rutin area tanam TOGA`
 
-Format kolom list (`manfaat`, `cara_pakai`, `catatan`) dapat diisi:
+Format kolom list (`manfaat`, `catatan`) dapat diisi:
 - Satu nilai saja, atau
 - Banyak nilai dipisah karakter `|` (pipe), contoh: `A|B|C`
+
+Kolom `deskripsi` diisi teks paragraf (HTML mentah), contoh:
+```html
+<p>Kunyit dikenal sebagai rempah dengan banyak manfaat.</p>
+<p>Gunakan seperlunya sesuai kebutuhan.</p>
+```
 
 Formula spreadsheet:
 - `url_qr` (contoh di baris 2):
@@ -116,7 +122,7 @@ Gunakan kode yang Anda pakai saat ini (disarankan simpan sebagai `Code.gs`):
 /**
  * TOGA RT09 - JSON API dari Google Sheets
  * Sheet name: Plants
- * Kolom wajib: id,nama,nama_latin,jenis,gambar,manfaat,cara_pakai,catatan
+ * Kolom wajib: id,nama,nama_latin,jenis,gambar,manfaat,deskripsi,catatan
  */
 
 const SPREADSHEET_ID = "17BjGxtalow56mIflBtT_DihH1jJQo96r5Uur1ozZF9E";
@@ -235,7 +241,7 @@ function normalizePlant_(p) {
     jenis: p.jenis || "",
     gambar: p.gambar || "",
     manfaat: splitPipe_(p.manfaat),
-    cara_pakai: splitPipe_(p.cara_pakai),
+    deskripsi: p.deskripsi || "",
     catatan: splitPipe_(p.catatan)
   };
 }
@@ -288,7 +294,7 @@ Contoh objek tanaman:
   "jenis": "Rimpang",
   "gambar": "images/kunyit.jpg",
   "manfaat": ["Anti-inflamasi", "Membantu pencernaan"],
-  "cara_pakai": ["Seduh 1-2 iris", "Minum 1x sehari"],
+  "deskripsi": "<p>Kunyit memiliki kandungan kurkumin yang dikenal bermanfaat.</p>",
   "catatan": ["Tidak untuk dosis berlebihan"]
 }
 ```

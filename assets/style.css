@@ -412,6 +412,21 @@ body {
   color: #e5f8f1;
 }
 
+.desc {
+  margin: 0;
+  color: #e5f8f1;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.desc p {
+  margin: 0 0 10px;
+}
+
+.desc p:last-child {
+  margin-bottom: 0;
+}
+
 .chips {
   display: flex;
   gap: 8px;

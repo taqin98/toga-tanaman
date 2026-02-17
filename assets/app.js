@@ -55,7 +55,7 @@ function normalizePlant(raw) {
     jenis: raw.jenis || "TOGA",
     gambar: raw.gambar || "",
     manfaat: toList(raw.manfaat),
-    cara_pakai: toList(raw.cara_pakai),
+    deskripsi: typeof raw.deskripsi === "string" ? raw.deskripsi : "",
     catatan: toList(raw.catatan),
   };
 }
@@ -463,7 +463,7 @@ function renderDetail(plant) {
   $("chipJenis").textContent = plant.jenis || "TOGA";
 
   setList($("manfaat"), plant.manfaat);
-  setList($("cara"), plant.cara_pakai);
+  $("deskripsi").innerHTML = plant.deskripsi || "";
   setList($("catatan"), plant.catatan);
 
   $("btnShare").onclick = async () => {
