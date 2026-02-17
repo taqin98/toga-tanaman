@@ -13,9 +13,14 @@ const LIST_STATE = {
   view: "grid",
 };
 const LIST_PAGE_SIZE = 10;
+const SUPPORTS_INTERSECTION_OBSERVER = "IntersectionObserver" in window;
+const MIN_SPINNER_MS = 320;
 let listIntersectionObserver = null;
 let filteredPlantsCache = [];
 let visiblePlantsCount = LIST_PAGE_SIZE;
+let lastRenderedCount = 0;
+let isLoadingMore = false;
+let loadingStartedAt = 0;
 
 const $ = (id) => document.getElementById(id);
 
@@ -201,6 +206,11 @@ function show(id) {
   // Restart animation each state transition.
   void target.offsetWidth;
   target.classList.add("state-enter");
+
+  if (id !== "stateList") {
+    $("loadMoreTrigger").classList.add("hidden");
+    $("loadMoreActions").classList.add("hidden");
+  }
 }
 
 function resolveImg(src) {
@@ -237,37 +247,84 @@ function makeListCard(item) {
   return a;
 }
 
-function renderList(items) {
+function renderList(items, mode = "reset") {
   const listWrap = $("listWrap");
   const listCount = $("listCount");
   const listEmpty = $("listEmpty");
   const loadMoreTrigger = $("loadMoreTrigger");
+  const loadMoreActions = $("loadMoreActions");
+  const loadMoreBtn = $("loadMoreBtn");
+  const loadMoreDone = $("loadMoreDone");
   const compactMode = LIST_STATE.view === "compact";
   const totalItems = items.length;
   const visibleItems = items.slice(0, visiblePlantsCount);
+  const hasMore = visibleItems.length < totalItems;
 
-  listWrap.innerHTML = "";
+  if (mode === "reset") {
+    listWrap.innerHTML = "";
+    lastRenderedCount = 0;
+  }
+
   listWrap.classList.toggle("compact", compactMode);
 
   visibleItems.forEach((item, index) => {
+    if (index < lastRenderedCount) return;
     const card = makeListCard(item);
-    card.style.animation = "fadeUp 0.35s ease both";
-    card.style.animationDelay = `${Math.min(index * 45, 320)}ms`;
+    if (mode === "reset") {
+      card.style.animation = "fadeUp 0.35s ease both";
+      card.style.animationDelay = `${Math.min(index * 45, 320)}ms`;
+    }
     listWrap.appendChild(card);
   });
 
+  lastRenderedCount = visibleItems.length;
+
   listCount.textContent = `Menampilkan ${visibleItems.length} dari ${totalItems} tanaman`;
   listEmpty.classList.toggle("hidden", totalItems > 0);
-  loadMoreTrigger.classList.toggle("hidden", visibleItems.length >= totalItems || totalItems === 0);
+  loadMoreTrigger.classList.toggle(
+    "hidden",
+    !SUPPORTS_INTERSECTION_OBSERVER || !hasMore || totalItems === 0
+  );
+  loadMoreActions.classList.toggle("hidden", totalItems === 0);
+  loadMoreBtn.classList.toggle("hidden", !hasMore);
+  loadMoreDone.classList.toggle("hidden", hasMore || totalItems === 0);
+
+  if (listIntersectionObserver) {
+    if (!hasMore || totalItems === 0) {
+      listIntersectionObserver.disconnect();
+    } else if (SUPPORTS_INTERSECTION_OBSERVER) {
+      listIntersectionObserver.observe(loadMoreTrigger);
+    }
+  }
 }
 
 function loadMoreItems() {
   if (visiblePlantsCount >= filteredPlantsCache.length) return;
+  if (isLoadingMore) return;
+  isLoadingMore = true;
+  loadingStartedAt = Date.now();
+  const loadMoreTrigger = $("loadMoreTrigger");
+  const loadMoreBtn = $("loadMoreBtn");
+  loadMoreTrigger.classList.add("is-loading");
+  loadMoreBtn.disabled = true;
+
   visiblePlantsCount = Math.min(
     visiblePlantsCount + LIST_PAGE_SIZE,
     filteredPlantsCache.length
   );
-  renderList(filteredPlantsCache);
+
+  const finishLoad = () => {
+    renderList(filteredPlantsCache, "append");
+    loadMoreTrigger.classList.remove("is-loading");
+    loadMoreBtn.disabled = false;
+    isLoadingMore = false;
+  };
+
+  requestAnimationFrame(() => {
+    const elapsed = Date.now() - loadingStartedAt;
+    const delay = Math.max(MIN_SPINNER_MS - elapsed, 0);
+    setTimeout(finishLoad, delay);
+  });
 }
 
 function resetListPagination() {
@@ -275,6 +332,7 @@ function resetListPagination() {
 }
 
 function setupLoadMoreObserver() {
+  if (!SUPPORTS_INTERSECTION_OBSERVER) return;
   if (listIntersectionObserver) {
     listIntersectionObserver.disconnect();
   }
@@ -348,6 +406,7 @@ function setupListInteractions(plants) {
   const jenisWrap = $("jenisFilters");
   const viewCard = $("viewCard");
   const viewCompact = $("viewCompact");
+  const loadMoreBtn = $("loadMoreBtn");
   const jenisOptions = getJenisOptions(plants);
 
   renderJenisFilters(jenisOptions);
@@ -357,7 +416,7 @@ function setupListInteractions(plants) {
   const applyFilter = () => {
     filteredPlantsCache = getFilteredPlants(plants);
     resetListPagination();
-    renderList(filteredPlantsCache);
+    renderList(filteredPlantsCache, "reset");
   };
 
   input.addEventListener("input", () => {
@@ -376,13 +435,17 @@ function setupListInteractions(plants) {
   viewCard.addEventListener("click", () => {
     LIST_STATE.view = "grid";
     updateViewToggle();
-    renderList(filteredPlantsCache);
+    renderList(filteredPlantsCache, "reset");
   });
 
   viewCompact.addEventListener("click", () => {
     LIST_STATE.view = "compact";
     updateViewToggle();
-    renderList(filteredPlantsCache);
+    renderList(filteredPlantsCache, "reset");
+  });
+
+  loadMoreBtn.addEventListener("click", () => {
+    loadMoreItems();
   });
 
   applyFilter();

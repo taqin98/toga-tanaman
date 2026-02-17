@@ -196,7 +196,14 @@
 
       <div id="listWrap" class="grid"></div>
       <div id="loadMoreTrigger" class="load-more-trigger hidden" aria-hidden="true">
-        <span class="load-more-text">Memuat data berikutnya...</span>
+        <span class="load-more-spinner" aria-hidden="true"></span>
+        <span class="load-more-text">Scroll untuk memuat data berikutnya...</span>
+      </div>
+      <div id="loadMoreActions" class="load-more-actions hidden">
+        <button id="loadMoreBtn" class="btn btn-ghost btn-loadmore" type="button">
+          Muat lagi 10 data
+        </button>
+        <p id="loadMoreDone" class="load-more-done hidden">Semua data sudah ditampilkan.</p>
       </div>
       <p id="listEmpty" class="empty hidden">Tidak ada tanaman yang cocok dengan pencarian.</p>
     </section>

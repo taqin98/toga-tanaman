@@ -305,10 +305,53 @@ body {
 .load-more-trigger {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 8px;
   padding: 8px 0 0;
 }
 
 .load-more-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.load-more-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(195, 242, 220, 0.2);
+  border-top-color: rgba(195, 242, 220, 0.75);
+  display: none;
+  animation: spin 0.7s linear infinite;
+}
+
+.load-more-trigger.is-loading .load-more-spinner {
+  display: inline-block;
+}
+
+.load-more-trigger.is-loading .load-more-text {
+  color: #d6f6ee;
+}
+
+.load-more-trigger:not(.is-loading) .load-more-spinner {
+  animation-play-state: paused;
+}
+
+.load-more-actions {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.btn-loadmore {
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+
+.load-more-done {
+  margin: 0;
   font-size: 12px;
   color: var(--muted);
 }
@@ -571,6 +614,12 @@ small {
   }
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
