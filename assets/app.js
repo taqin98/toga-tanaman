@@ -10,7 +10,7 @@ const CACHE_KEYS = {
 const LIST_STATE = {
   query: "",
   jenis: "all",
-  view: "grid",
+  view: "list",
 };
 const LIST_PAGE_SIZE = 10;
 const SUPPORTS_INTERSECTION_OBSERVER = "IntersectionObserver" in window;
