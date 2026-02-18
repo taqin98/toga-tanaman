@@ -99,6 +99,43 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
+    .results {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 12px;
+    }
+    .result-card {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+    .result-card h4 {
+      font-size: 0.95rem;
+      margin: 0 0 8px;
+      word-break: break-all;
+    }
+    .result-thumb {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      object-fit: contain;
+      background: #f4f6fb;
+    }
+    .result-actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .result-actions button {
+      width: 100%;
+    }
+    .hidden {
+      display: none !important;
+    }
     .panel {
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -146,7 +183,7 @@
       <div class="grid">
         <div>
           <label for="fileInput">Gambar QR</label>
-          <input id="fileInput" type="file" accept="image/*" />
+          <input id="fileInput" type="file" accept="image/*" multiple />
         </div>
         <div>
           <label for="markerId">Nama file output (tanpa ekstensi)</label>
@@ -187,11 +224,21 @@
         <div class="preview-box" id="markerPreview"></div>
       </div>
     </section>
+
+    <section class="card">
+      <h3>Hasil Batch</h3>
+      <p>Jika upload lebih dari 1 file, hasil akan tampil di sini.</p>
+      <div class="actions">
+        <button id="btnDownloadZip" class="primary" disabled>Download ZIP (Batch)</button>
+      </div>
+      <div id="resultsList" class="results"></div>
+    </section>
   </main>
 
   <script src="assets/vendor/pdfMake/pdfmake.min.js"></script>
   <script src="assets/vendor/pdfMake/vfs_fonts.js"></script>
   <script src="assets/vendor/arjs/threex-arpatternfile.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
     const fileInput = document.getElementById("fileInput");
     const markerIdInput = document.getElementById("markerId");
@@ -207,9 +254,12 @@
     const inputPreview = document.getElementById("inputPreview");
     const markerPreview = document.getElementById("markerPreview");
     const statusText = document.getElementById("statusText");
+    const resultsList = document.getElementById("resultsList");
+    const btnDownloadZip = document.getElementById("btnDownloadZip");
 
     let innerImageURL = null;
     let fullMarkerURL = null;
+    let selectedItems = [];
 
     function setStatus(text) {
       statusText.textContent = text || "";
@@ -221,6 +271,16 @@
       img.alt = file.name;
       img.src = srcUrl;
       inputPreview.appendChild(img);
+    }
+
+    function renderInputPreviewList(items) {
+      inputPreview.innerHTML = "";
+      items.forEach((item) => {
+        const img = new Image();
+        img.alt = item.file.name;
+        img.src = item.dataUrl;
+        inputPreview.appendChild(img);
+      });
     }
 
     function renderMarkerPreview(srcUrl) {
@@ -238,6 +298,11 @@
         .replace(/_+/g, "_");
     }
 
+    function safeFileBaseFromName(filename) {
+      const base = filename.replace(/\.[^/.]+$/, "");
+      return base.trim().replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_");
+    }
+
     function setDownloadState(enabled) {
       const disabled = !enabled;
       btnDownloadMarker.disabled = disabled;
@@ -245,6 +310,21 @@
       btnPdfOne.disabled = disabled;
       btnPdfTwo.disabled = disabled;
       btnPdfSix.disabled = disabled;
+    }
+
+    function setZipState(enabled) {
+      btnDownloadZip.disabled = !enabled;
+    }
+
+    function updateGlobalActionsVisibility(isBatch) {
+      const hide = Boolean(isBatch);
+      btnDownloadMarker.classList.toggle("hidden", hide);
+      btnDownloadPatt.classList.toggle("hidden", hide);
+      btnPdfOne.classList.toggle("hidden", hide);
+      btnPdfTwo.classList.toggle("hidden", hide);
+      btnPdfSix.classList.toggle("hidden", hide);
+      markerPreview.classList.toggle("hidden", hide);
+      btnDownloadZip.classList.toggle("hidden", !hide);
     }
 
     function normalizeBorderColor(inputColor) {
@@ -256,6 +336,75 @@
       return value;
     }
 
+    function renderResults() {
+      resultsList.innerHTML = "";
+      selectedItems.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "result-card";
+
+        const title = document.createElement("h4");
+        title.textContent = item.file.name;
+
+        const img = document.createElement("img");
+        img.className = "result-thumb";
+        img.alt = item.file.name;
+        img.src = item.markerUrl || item.dataUrl;
+
+        const actions = document.createElement("div");
+        actions.className = "result-actions";
+
+        const btnPng = document.createElement("button");
+        btnPng.textContent = "Download Marker PNG";
+        btnPng.disabled = !item.markerUrl;
+        btnPng.addEventListener("click", () => {
+          if (!item.markerUrl) return;
+          const base = safeFileBaseFromName(item.file.name);
+          const a = document.createElement("a");
+          a.href = item.markerUrl;
+          a.download = `${base}-marker.png`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        });
+
+        const btnPattItem = document.createElement("button");
+        btnPattItem.textContent = "Download .patt";
+        btnPattItem.disabled = !item.markerUrl;
+        btnPattItem.addEventListener("click", () => {
+          if (!item.dataUrl || !item.markerUrl) return;
+          const base = safeFileBaseFromName(item.file.name);
+          THREEx.ArPatternFile.encodeImageURL(item.dataUrl, function onComplete(patternFileString) {
+            THREEx.ArPatternFile.triggerDownload(patternFileString, `${base}.patt`);
+          });
+        });
+
+        const btnPdf1 = document.createElement("button");
+        btnPdf1.textContent = "PDF 1/Page";
+        btnPdf1.disabled = !item.markerUrl;
+        btnPdf1.addEventListener("click", () => generatePdf(1, item.markerUrl));
+
+        const btnPdf2 = document.createElement("button");
+        btnPdf2.textContent = "PDF 2/Page";
+        btnPdf2.disabled = !item.markerUrl;
+        btnPdf2.addEventListener("click", () => generatePdf(2, item.markerUrl));
+
+        const btnPdf6 = document.createElement("button");
+        btnPdf6.textContent = "PDF 6/Page";
+        btnPdf6.disabled = !item.markerUrl;
+        btnPdf6.addEventListener("click", () => generatePdf(6, item.markerUrl));
+
+        actions.appendChild(btnPng);
+        actions.appendChild(btnPattItem);
+        actions.appendChild(btnPdf1);
+        actions.appendChild(btnPdf2);
+        actions.appendChild(btnPdf6);
+
+        card.appendChild(title);
+        card.appendChild(img);
+        card.appendChild(actions);
+        resultsList.appendChild(card);
+      });
+    }
     function updateFullMarkerImage() {
       if (!innerImageURL) {
         setStatus("Pilih gambar QR terlebih dahulu.");
@@ -295,57 +444,172 @@
       );
     }
 
-    function generatePdf(mode) {
-      if (!fullMarkerURL || !window.pdfMake) return;
+    function generatePdf(mode, markerUrlOverride) {
+      const markerUrl = markerUrlOverride || fullMarkerURL;
+      if (!markerUrl || !window.pdfMake) return;
 
       let docDefinition;
       if (mode === 1) {
         docDefinition = {
-          content: [{ image: fullMarkerURL, width: 600, alignment: "center" }]
+          content: [{ image: markerUrl, width: 600, alignment: "center" }]
         };
       } else if (mode === 2) {
         docDefinition = {
           content: [
-            { image: fullMarkerURL, width: 300, alignment: "center" },
-            { image: fullMarkerURL, width: 300, alignment: "center" }
+            { image: markerUrl, width: 300, alignment: "center" },
+            { image: markerUrl, width: 300, alignment: "center" }
           ]
         };
       } else {
         docDefinition = {
           content: [
-            { columns: [{ image: fullMarkerURL, width: 250 }, { image: fullMarkerURL, width: 250 }] },
-            { columns: [{ image: fullMarkerURL, width: 250 }, { image: fullMarkerURL, width: 250 }] },
-            { columns: [{ image: fullMarkerURL, width: 250 }, { image: fullMarkerURL, width: 250 }] }
+            { columns: [{ image: markerUrl, width: 250 }, { image: markerUrl, width: 250 }] },
+            { columns: [{ image: markerUrl, width: 250 }, { image: markerUrl, width: 250 }] },
+            { columns: [{ image: markerUrl, width: 250 }, { image: markerUrl, width: 250 }] }
           ]
         };
       }
       pdfMake.createPdf(docDefinition).open();
     }
 
-    fileInput.addEventListener("change", () => {
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    fileInput.addEventListener("change", async () => {
       innerImageURL = null;
       fullMarkerURL = null;
       setDownloadState(false);
+      setZipState(false);
       markerPreview.innerHTML = "";
+      resultsList.innerHTML = "";
+      selectedItems = [];
 
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) {
+      const files = Array.from(fileInput.files || []);
+      if (!files.length) {
         inputPreview.innerHTML = "";
         setStatus("");
+        updateGlobalActionsVisibility(false);
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        innerImageURL = String(reader.result || "");
+      if (files.length > 1) {
+        updateGlobalActionsVisibility(true);
+        setStatus(`Membaca ${files.length} file...`);
+        try {
+          const dataUrls = await Promise.all(files.map((file) => readFileAsDataURL(file)));
+          selectedItems = files.map((file, index) => ({
+            file,
+            dataUrl: dataUrls[index],
+            markerUrl: null
+          }));
+          renderInputPreviewList(selectedItems);
+          renderResults();
+          setStatus("Semua file siap. Klik Generate untuk batch.");
+        } catch (error) {
+          console.error(error);
+          setStatus("Gagal membaca salah satu file.");
+        }
+        return;
+      }
+
+      updateGlobalActionsVisibility(false);
+      const file = files[0];
+      try {
+        innerImageURL = await readFileAsDataURL(file);
         renderInputPreview(file, innerImageURL);
         setStatus("Gambar siap. Klik Generate.");
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error(error);
+        setStatus("Gagal membaca file.");
+      }
     });
 
-    btnGenerate.addEventListener("click", () => {
+    btnGenerate.addEventListener("click", async () => {
+      if (selectedItems.length > 1) {
+        if (!window.THREEx || !THREEx.ArPatternFile) {
+          setStatus("Library THREEx.ArPatternFile tidak ter-load.");
+          return;
+        }
+        const patternRatio = Number(patternRatioInput.value);
+        const imageSize = Number(imageSizeInput.value);
+        if (!Number.isFinite(patternRatio) || patternRatio <= 0 || patternRatio >= 1) {
+          setStatus("Pattern Ratio harus di antara 0 dan 1.");
+          return;
+        }
+        if (!Number.isFinite(imageSize) || imageSize < 200) {
+          setStatus("Image size minimal 200.");
+          return;
+        }
+        const borderColor = normalizeBorderColor(borderColorInput.value);
+        borderColorInput.value = borderColor.startsWith("#") ? borderColor : "#000000";
+
+        setStatus("Generate batch dimulai...");
+        for (const item of selectedItems) {
+          await new Promise((resolve) => {
+            THREEx.ArPatternFile.buildFullMarker(
+              item.dataUrl,
+              patternRatio,
+              Math.floor(imageSize),
+              borderColor,
+              function onComplete(markerUrl) {
+                item.markerUrl = markerUrl;
+                resolve();
+              }
+            );
+          });
+        }
+        renderResults();
+        setZipState(true);
+        setStatus("Generate batch selesai. Silakan download per file.");
+        return;
+      }
+
       updateFullMarkerImage();
+    });
+
+    btnDownloadZip.addEventListener("click", async () => {
+      if (!window.JSZip) {
+        setStatus("Library JSZip tidak ter-load.");
+        return;
+      }
+      if (!selectedItems.length) return;
+      const notReady = selectedItems.some((item) => !item.markerUrl);
+      if (notReady) {
+        setStatus("Generate batch terlebih dahulu sebelum download ZIP.");
+        return;
+      }
+
+      setStatus("Membuat ZIP...");
+      const zip = new JSZip();
+      for (const item of selectedItems) {
+        const base = safeFileBaseFromName(item.file.name);
+        const markerData = String(item.markerUrl || "");
+        const markerBase64 = markerData.includes(",") ? markerData.split(",")[1] : markerData;
+        zip.file(`${base}-marker.png`, markerBase64, { base64: true });
+        await new Promise((resolve) => {
+          THREEx.ArPatternFile.encodeImageURL(item.dataUrl, function onComplete(patternFileString) {
+            zip.file(`${base}.patt`, patternFileString);
+            resolve();
+          });
+        });
+      }
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "markers-batch.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus("ZIP siap diunduh.");
     });
 
     btnDownloadMarker.addEventListener("click", () => {
