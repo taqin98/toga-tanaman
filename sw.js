@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v10.8.7";
+const SW_VERSION = "toga-v10.8.8";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 

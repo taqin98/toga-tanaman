@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Batch Print Marker (A4 2x2)</title>
+    <style>
+      :root {
+        --bg: #f2f4f6;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #64748b;
+        --line: #e2e8f0;
+        --brand: #0f766e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr;
+        gap: 16px;
+        align-items: start;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input[type="file"] {
+        width: 100%;
+        padding: 10px 11px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        font-size: 14px;
+        background: #fff;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+        align-items: center;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        background: #e7ecef;
+        color: #14212c;
+      }
+      button.primary {
+        background: var(--brand);
+        color: #fff;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .status {
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--muted);
+        min-height: 20px;
+      }
+      .preview {
+        width: 100%;
+        height: 74vh;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #0b1220;
+      }
+      .note {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .helper {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .preview-header h3 {
+        margin: 0;
+        font-size: 16px;
+      }
+      .card.is-sticky {
+        position: sticky;
+        top: 12px;
+      }
+      @media (max-width: 980px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .card.is-sticky {
+          position: static;
+        }
+        .preview {
+          height: 62vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="grid">
+        <section class="card">
+          <h1>Batch Print Marker (A4 2x2)</h1>
+          <p>
+            Sistem akan membuat PDF A4 2x2, ukuran marker 10cm x 10cm, dengan
+            label 7mm di bawah marker. Anda bisa memakai file marker yang
+            sudah ada di folder <code>markers/qr/</code> (akhiran
+            <code>-marker.png</code>) tanpa upload ulang.
+          </p>
+          <div class="actions">
+            <button id="btnLoadExisting" class="primary">
+              Gunakan Marker Folder markers/qr
+            </button>
+            <span class="helper">Cepat tanpa upload manual.</span>
+          </div>
+          <label for="fileInput">Atau upload gambar marker manual (opsional)</label>
+          <input id="fileInput" type="file" accept="image/*" multiple />
+          <div class="actions">
+            <button id="btnDownload" class="primary" disabled>
+              Download PDF
+            </button>
+          </div>
+          <div class="status" id="statusText"></div>
+          <div class="note">
+            Rekomendasi: cetak di kertas matte (bukan glossy) untuk mengurangi
+            pantulan dan menjaga tracking AR.js.
+          </div>
+        </section>
+
+        <section class="card is-sticky">
+          <div class="preview-header">
+            <h3>Preview PDF</h3>
+            <div class="actions" style="margin:0;">
+              <button id="btnFullscreen" disabled>Fullscreen</button>
+            </div>
+          </div>
+          <iframe id="pdfPreview" class="preview" title="Preview PDF"></iframe>
+        </section>
+      </div>
+    </main>
+
+    <script src="assets/vendor/pdfMake/pdfmake.min.js"></script>
+    <script src="assets/vendor/pdfMake/vfs_fonts.js"></script>
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const btnLoadExisting = document.getElementById("btnLoadExisting");
+      const btnDownload = document.getElementById("btnDownload");
+      const btnFullscreen = document.getElementById("btnFullscreen");
+      const statusText = document.getElementById("statusText");
+      const pdfPreview = document.getElementById("pdfPreview");
+
+      const MM = 72 / 25.4;
+      const mm = (v) => v * MM;
+
+      const PAGE_W_MM = 210;
+      const PAGE_H_MM = 297;
+      const MARGIN_H_MM = 5;
+      const MARGIN_V_MM = 8;
+      const MARKER_MM = 100;
+      const LABEL_GAP_MM = 7;
+      const ROW_H_MM = (PAGE_H_MM - MARGIN_V_MM * 2) / 2;
+      const CELL_TOP_PAD_MM =
+        (ROW_H_MM - (MARKER_MM + LABEL_GAP_MM + 6)) / 2;
+
+      let items = [];
+      let lastPdfBlob = null;
+
+      function setStatus(text) {
+        statusText.textContent = text || "";
+      }
+
+      function baseName(filename) {
+        return filename.replace(/\.[^/.]+$/, "");
+      }
+
+      function safeBase(input) {
+        return String(input || "")
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]/g, "_")
+          .replace(/_+/g, "_");
+      }
+
+      function readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function fetchAsDataURL(url) {
+        const res = await fetch(url, { cache: "no-cache" });
+        if (!res.ok) throw new Error(`Gagal fetch ${url}`);
+        const blob = await res.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      function buildCell(item) {
+        if (!item) return { text: "" };
+        return {
+          stack: [
+            {
+              stack: [
+                {
+                  canvas: [
+                    {
+                      type: "rect",
+                      x: 0,
+                      y: 0,
+                      w: mm(MARKER_MM),
+                      h: mm(MARKER_MM),
+                      r: 0,
+                      lineWidth: 1,
+                      lineColor: "#000000",
+                    },
+                  ],
+                },
+                {
+                  image: item.dataUrl,
+                  width: mm(MARKER_MM),
+                  height: mm(MARKER_MM),
+                  alignment: "center",
+                  margin: [0, mm(-MARKER_MM), 0, 0],
+                },
+              ],
+            },
+            {
+              text: baseName(item.file.name).replace(/-marker$/i, "").toUpperCase(),
+              margin: [0, mm(LABEL_GAP_MM), 0, 0],
+              alignment: "center",
+              fontSize: 12,
+              bold: true,
+            },
+          ],
+          margin: [0, mm(Math.max(CELL_TOP_PAD_MM, 0)), 0, 0],
+        };
+      }
+
+      function buildPageCells(pageItems) {
+        const cells = pageItems.concat(new Array(4).fill(null)).slice(0, 4);
+        return [
+          [buildCell(cells[0]), buildCell(cells[1])],
+          [buildCell(cells[2]), buildCell(cells[3])],
+        ];
+      }
+
+      function buildDocDefinition(itemsData) {
+        const pages = [];
+        for (let i = 0; i < itemsData.length; i += 4) {
+          pages.push(itemsData.slice(i, i + 4));
+        }
+
+        const content = pages.map((pageItems, idx) => ({
+          table: {
+            widths: [mm(MARKER_MM), mm(MARKER_MM)],
+            heights: [mm(ROW_H_MM), mm(ROW_H_MM)],
+            body: buildPageCells(pageItems),
+          },
+          layout: {
+            hLineWidth: () => 0,
+            vLineWidth: () => 0,
+            paddingLeft: () => 0,
+            paddingRight: () => 0,
+            paddingTop: () => 0,
+            paddingBottom: () => 0,
+          },
+          margin: [0, 0, 0, 0],
+          pageBreak: idx < pages.length - 1 ? "after" : undefined,
+        }));
+
+        return {
+          pageSize: "A4",
+          pageMargins: [mm(MARGIN_H_MM), mm(MARGIN_V_MM), mm(MARGIN_H_MM), mm(MARGIN_V_MM)],
+          content,
+        };
+      }
+
+      async function renderPdfPreview(itemsData) {
+        if (!itemsData.length) {
+          pdfPreview.removeAttribute("src");
+          btnDownload.disabled = true;
+          btnFullscreen.disabled = true;
+          return;
+        }
+
+        const docDefinition = buildDocDefinition(itemsData);
+        const pdfDoc = pdfMake.createPdf(docDefinition);
+
+        pdfDoc.getBlob((blob) => {
+          lastPdfBlob = blob;
+          const url = URL.createObjectURL(blob);
+          pdfPreview.src = url;
+          btnDownload.disabled = false;
+          btnFullscreen.disabled = false;
+        });
+      }
+
+      fileInput.addEventListener("change", async () => {
+        items = [];
+        setStatus("");
+        btnDownload.disabled = true;
+        if (lastPdfBlob) {
+          lastPdfBlob = null;
+        }
+        const files = Array.from(fileInput.files || []);
+        if (!files.length) {
+          renderPdfPreview([]);
+          return;
+        }
+
+        setStatus(`Membaca ${files.length} file...`);
+        try {
+          const dataUrls = await Promise.all(files.map(readFileAsDataURL));
+          items = files.map((file, i) => ({ file, dataUrl: dataUrls[i] }));
+          setStatus("Membuat preview PDF...");
+          await renderPdfPreview(items);
+          setStatus("Preview siap.");
+        } catch (err) {
+          console.error(err);
+          setStatus("Gagal membaca salah satu file.");
+        }
+      });
+
+      btnLoadExisting.addEventListener("click", async () => {
+        items = [];
+        setStatus("");
+        btnDownload.disabled = true;
+        try {
+          setStatus("Memuat daftar marker dari report.json...");
+          const res = await fetch("markers/qr/report.json", {
+            cache: "no-cache",
+          });
+          if (!res.ok) throw new Error("report.json tidak ditemukan");
+          const list = await res.json();
+          const entries = Array.isArray(list) ? list : Object.values(list || {});
+          const markerItems = entries
+            .map((item) => {
+              const id = String(item.id || "").trim();
+              if (!id) return null;
+              const safeId = safeBase(id);
+              const path = `markers/qr/${safeId}-marker.png`;
+              return { id, safeId, path };
+            })
+            .filter(Boolean);
+
+          if (!markerItems.length) {
+            setStatus("Tidak ada data marker di report.json.");
+            return;
+          }
+
+          setStatus(`Mengambil ${markerItems.length} marker...`);
+          const results = await Promise.all(
+            markerItems.map(async (m) => {
+              try {
+                const dataUrl = await fetchAsDataURL(m.path);
+                return { ok: true, dataUrl, meta: m };
+              } catch (err) {
+                console.warn("Marker tidak ditemukan:", m.path);
+                return { ok: false, error: err, meta: m };
+              }
+            })
+          );
+
+          const okItems = results.filter((r) => r.ok);
+          const failed = results.filter((r) => !r.ok);
+
+          items = okItems.map((r) => ({
+            file: { name: `${r.meta.safeId}-marker.png` },
+            dataUrl: r.dataUrl,
+          }));
+
+          if (failed.length > 0) {
+            setStatus(
+              `Sebagian marker tidak ditemukan (${failed.length}). Yang berhasil: ${items.length}.`
+            );
+          }
+          await renderPdfPreview(items);
+          if (failed.length === 0) {
+            setStatus("Preview siap dari marker folder.");
+          }
+        } catch (err) {
+          console.error(err);
+          setStatus("Gagal memuat marker dari folder.");
+        }
+      });
+
+      btnDownload.addEventListener("click", () => {
+        if (!lastPdfBlob) return;
+        const url = URL.createObjectURL(lastPdfBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "markers-a4-2x2.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      btnFullscreen.addEventListener("click", async () => {
+        if (!pdfPreview) return;
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen();
+          } else if (pdfPreview.requestFullscreen) {
+            await pdfPreview.requestFullscreen();
+          }
+        } catch (err) {
+          console.warn("Fullscreen gagal:", err);
+        }
+      });
+    </script>
+  </body>
+</html>
