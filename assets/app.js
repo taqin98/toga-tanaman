@@ -179,8 +179,12 @@ async function refreshPlantDetailCache(id) {
       `${API_URL}?id=${encodeURIComponent(id)}`
     );
     const normalized = normalizePlant(remote);
-    if (normalized) writeCache(CACHE_KEYS.detail(id), normalized);
+    if (normalized) {
+      writeCache(CACHE_KEYS.detail(id), normalized);
+      return normalized;
+    }
   } catch (_) {}
+  return null;
 }
 
 async function loadPlantDetail(id, fallbackMap) {
@@ -601,6 +605,19 @@ async function main() {
 
     renderDetail(plant);
     show("stateDetail");
+
+    refreshPlantDetailCache(id).then((fresh) => {
+      if (!fresh) return;
+      const hasMissing =
+        !plant.deskripsi ||
+        (Array.isArray(plant.manfaat) && plant.manfaat.length === 0);
+      const hasFresh =
+        fresh.deskripsi ||
+        (Array.isArray(fresh.manfaat) && fresh.manfaat.length > 0);
+      if (hasMissing && hasFresh) {
+        renderDetail(fresh);
+      }
+    });
   } catch (err) {
     console.error(err);
     show("stateError");
