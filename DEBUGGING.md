@@ -34,7 +34,7 @@ Gejala umum:
 
 Langkah cek AR:
 1. Pastikan izin kamera diberikan.
-2. Pastikan file marker ada: `markers/<id>_v3.patt`.
+2. Pastikan file marker ada: `markers/<id>.patt`.
 3. Pastikan `id` marker sama dengan `id` data tanaman.
 4. Cek Console untuk error gambar (CORS/path) dan marker loading.
 

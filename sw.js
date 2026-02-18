@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v10.8.2";
+const SW_VERSION = "toga-v10.8.3";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 
@@ -32,8 +32,8 @@ const STATIC_ASSETS = [
   "./images/kunyit-320.webp",
   "./images/kunyit-640.webp",
   "./images/kunyit-1000.webp",
-  "./markers/kangkung_v3.patt",
-  "./markers/kunyit_v3.patt"
+  "./markers/kangkung.patt",
+  "./markers/kunyit.patt"
 ];
 
 self.addEventListener("install", (event) => {

@@ -35,7 +35,7 @@ Proyek ini menyediakan:
 ├── data/
 │   └── plants.json             # Data fallback lokal
 ├── markers/
-│   ├── *_v3.patt               # File marker AR per tanaman
+│   ├── *.patt               # File marker AR per tanaman
 │   └── note.md
 ├── images/                     # Gambar tanaman lokal
 └── assets/
@@ -303,7 +303,7 @@ Contoh objek tanaman:
 1. Tambahkan data tanaman (ID unik) ke sumber data utama (API) dan/atau `data/plants.json`.
 2. Tambahkan gambar ke `images/` lalu isi field `gambar`.
 3. Buat marker pattern dengan nama:
-   - `markers/<id>_v3.patt`
+   - `markers/<id>.patt`
 4. Uji akses:
    - `/?id=<id>`
    - `/ar.html` lalu scan marker.
@@ -321,14 +321,14 @@ Marker AR pada proyek ini dibuat dari generator resmi AR.js:
 
 ### Aturan Penamaan di Proyek Ini
 File marker harus disimpan di folder `markers/` dengan format:
-- `markers/<id>_v3.patt`
+- `markers/<id>.patt`
 
 Contoh:
-- ID tanaman `kunyit` -> `markers/kunyit_v3.patt`
-- ID tanaman `kangkung` -> `markers/kangkung_v3.patt`
+- ID tanaman `kunyit` -> `markers/kunyit.patt`
+- ID tanaman `kangkung` -> `markers/kangkung.patt`
 
 `<id>` harus sama persis dengan kolom `id` di data tanaman/API, karena `ar.html` memuat marker dengan pola:
-- `markers/${id}_v3.patt`
+- `markers/${id}.patt`
 
 ### Cara Uji Marker
 1. Buka `http://localhost/toga-tanaman/ar.html`.
@@ -384,7 +384,7 @@ npm run markers:generate -- \
 Output:
 - `markers/qr/<id>.png`
 - `markers/qr/<id>-marker.png`
-- `markers/<id>_v3.patt`
+- `markers/<id>.patt`
 - `markers/qr/report.json`
 
 ## Catatan PWA
