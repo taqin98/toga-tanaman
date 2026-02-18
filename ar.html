@@ -355,12 +355,27 @@
         return /^https?:\/\//i.test(url || "");
       }
 
+      function normalizeGoogleDriveUrl(url) {
+        if (!/drive\.google\.com/i.test(url)) return url;
+
+        const idMatch =
+          url.match(/[?&]id=([^&]+)/i) ||
+          url.match(/\/d\/([^/]+)/i) ||
+          url.match(/\/thumbnail\?id=([^&]+)/i);
+
+        const fileId = idMatch ? idMatch[1] : "";
+        if (!fileId) return url;
+
+        // direct image host that typically allows CORS for WebGL textures
+        return `https://lh3.googleusercontent.com/d/${fileId}`;
+      }
+
       function resolveImageSrc(gambar) {
         const src = safeStr(gambar).trim();
         if (!src) return PLACEHOLDER_SVG_DATA;
 
         // jika absolute http(s), pakai langsung
-        if (isHttpUrl(src)) return src;
+        if (isHttpUrl(src)) return normalizeGoogleDriveUrl(src);
 
         // jika data URL (base64 / svg)
         if (/^data:/i.test(src)) return src;
