@@ -556,7 +556,7 @@ function renderDetail(plant) {
   });
   $("nama").textContent = plant.nama || "-";
   $("latin").textContent = plant.nama_latin
-    ? `Nama latin: ${plant.nama_latin}`
+    ? `Nama Ilmiah: ${plant.nama_latin}`
     : "";
   $("chipJenis").textContent = plant.jenis || "TOGA";
 
