@@ -471,10 +471,17 @@
         };
 
         imgAsset.onerror = () => {
-          console.warn("Image failed (or CORS blocked):", srcUrl, "fallback placeholder");
+          const canRetry = isHttpUrl(srcUrl) && imgAsset.getAttribute("crossorigin");
+          if (canRetry && !imgAsset.dataset.retry) {
+            console.warn("Image CORS error, retry without crossorigin:", srcUrl);
+            imgAsset.dataset.retry = "1";
+            imgAsset.removeAttribute("crossorigin");
+            imgAsset.src = srcUrl;
+            return;
+          }
+          console.warn("Image failed:", srcUrl, "fallback placeholder");
           logDebug("imgError", { id, srcUrl });
           imgAsset.onerror = null;
-          imgAsset.removeAttribute("crossorigin");
           imgAsset.src = PLACEHOLDER_SVG_DATA;
         };
 
