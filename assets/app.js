@@ -14,6 +14,22 @@ const LIST_STATE = {
 };
 const LIST_PAGE_SIZE = 10;
 const SUPPORTS_INTERSECTION_OBSERVER = "IntersectionObserver" in window;
+const SUPPORTS_WEBP = (() => {
+  try {
+    return (
+      document
+        .createElement("canvas")
+        .toDataURL("image/webp")
+        .indexOf("data:image/webp") === 0
+    );
+  } catch (_) {
+    return false;
+  }
+})();
+const IMAGE_WIDTHS = [320, 640, 1000];
+const THUMB_SIZES =
+  "(min-width: 920px) 150px, (min-width: 640px) 120px, 80px";
+const HERO_SIZES = "100vw";
 const MIN_SPINNER_MS = 320;
 let listIntersectionObserver = null;
 let filteredPlantsCache = [];
@@ -229,6 +245,62 @@ function resolveImg(src) {
   return String(src).replace(/^\.\//, "");
 }
 
+function buildSrcset(base, ext, widths) {
+  return widths.map((w) => `${base}-${w}.${ext} ${w}w`).join(", ");
+}
+
+function buildWebpSrcset(base, widths) {
+  return widths.map((w) => `${base}-${w}.webp ${w}w`).join(", ");
+}
+
+function getImageVariants(src) {
+  const clean = resolveImg(src);
+  if (!clean) return { src: "" };
+  if (/^https?:\/\//i.test(clean)) return { src: clean };
+  if (!clean.startsWith("images/")) return { src: clean };
+
+  const match = clean.match(/^(.*)\.(jpg|jpeg|png)$/i);
+  if (!match) return { src: clean };
+
+  const base = match[1];
+  const ext = match[2].toLowerCase();
+  return {
+    src: clean,
+    base,
+    ext,
+    srcset: buildSrcset(base, ext, IMAGE_WIDTHS),
+    webpSrcset: buildWebpSrcset(base, IMAGE_WIDTHS),
+  };
+}
+
+function applyImageSources(img, src, { sizes, defaultWidth }) {
+  const variants = getImageVariants(src);
+  if (!variants.base) {
+    img.src = variants.src || "";
+    img.srcset = "";
+    if (sizes) {
+      img.sizes = sizes;
+    } else {
+      img.removeAttribute("sizes");
+    }
+    return;
+  }
+
+  const fallbackWidth = defaultWidth || IMAGE_WIDTHS[1];
+  if (SUPPORTS_WEBP) {
+    img.src = `${variants.base}-${fallbackWidth}.webp`;
+    img.srcset = variants.webpSrcset;
+  } else {
+    img.src = `${variants.base}-${fallbackWidth}.${variants.ext}`;
+    img.srcset = variants.srcset;
+  }
+  if (sizes) {
+    img.sizes = sizes;
+  } else {
+    img.removeAttribute("sizes");
+  }
+}
+
 function makeListCard(item) {
   const a = document.createElement("a");
   a.href = `./?id=${encodeURIComponent(item.id)}`;
@@ -236,12 +308,15 @@ function makeListCard(item) {
 
   const img = document.createElement("img");
   img.className = "thumb";
-  img.src = resolveImg(item.gambar || "");
   img.alt = `Foto ${item.nama || ""}`;
   img.width = 320;
   img.height = 240;
   img.loading = "lazy";
   img.decoding = "async";
+  applyImageSources(img, item.gambar || "", {
+    sizes: THUMB_SIZES,
+    defaultWidth: 320,
+  });
 
 
   const wrap = document.createElement("div");
@@ -471,7 +546,10 @@ function renderDetail(plant) {
   img.loading = "eager";
   img.width = 1000;
   img.height = 600;
-  img.src = plant.gambar || "";
+  applyImageSources(img, plant.gambar || "", {
+    sizes: HERO_SIZES,
+    defaultWidth: 1000,
+  });
   $("nama").textContent = plant.nama || "-";
   $("latin").textContent = plant.nama_latin
     ? `Nama latin: ${plant.nama_latin}`

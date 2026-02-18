@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v10.7.22";
+const SW_VERSION = "toga-v10.8.0";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 
@@ -19,7 +19,19 @@ const STATIC_ASSETS = [
   "./assets/screenshots/install-mobile.png",
   "./data/plants.json",
   "./images/kangkung.jpg",
+  "./images/kangkung-320.jpg",
+  "./images/kangkung-640.jpg",
+  "./images/kangkung-1000.jpg",
+  "./images/kangkung-320.webp",
+  "./images/kangkung-640.webp",
+  "./images/kangkung-1000.webp",
   "./images/kunyit.jpg",
+  "./images/kunyit-320.jpg",
+  "./images/kunyit-640.jpg",
+  "./images/kunyit-1000.jpg",
+  "./images/kunyit-320.webp",
+  "./images/kunyit-640.webp",
+  "./images/kunyit-1000.webp",
   "./markers/kangkung_v3.patt",
   "./markers/kunyit_v3.patt"
 ];
@@ -55,6 +67,21 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin === self.location.origin) {
     event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  if (request.destination === "font") {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  if (request.destination === "image") {
+    event.respondWith(staleWhileRevalidate(request, event));
+    return;
+  }
+
+  if (request.destination === "style" || request.destination === "script") {
+    event.respondWith(staleWhileRevalidate(request, event));
     return;
   }
 
@@ -131,4 +158,20 @@ async function networkFirst(request) {
     if (cached) return cached;
     throw _;
   }
+}
+
+function staleWhileRevalidate(request, event) {
+  const fetchPromise = fetch(request)
+    .then(async (response) => {
+      if (!response || !response.ok) return response;
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+
+  event.waitUntil(fetchPromise);
+  return caches.open(RUNTIME_CACHE).then((cache) =>
+    cache.match(request).then((cached) => cached || fetchPromise)
+  );
 }
