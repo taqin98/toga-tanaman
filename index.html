@@ -48,10 +48,34 @@
       } catch (_) {}
     })();
   </script>
+  <script>
+    (function () {
+      var key = "toga:theme";
+      var theme = "";
+      try {
+        theme = localStorage.getItem(key) || "";
+      } catch (_) {}
+      if (theme !== "dark" && theme !== "light") {
+        theme =
+          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) {
+        meta.setAttribute("content", theme === "dark" ? "#0f1a14" : "#dff0dd");
+      }
+    })();
+  </script>
   <style>
     html,
     body {
-      background-color: #1f7a3e;
+      background-color: #dff0dd;
+    }
+    html[data-theme="dark"],
+    html[data-theme="dark"] body {
+      background-color: #0f1a14;
     }
     #pwaBootSplash {
       position: fixed;
@@ -59,7 +83,7 @@
       z-index: 9999;
       display: none;
       place-items: center;
-      background: linear-gradient(150deg, #10352a, #1f7a3e);
+      background: linear-gradient(150deg, #2f7f48, #87ba58);
       color: #f3fbf8;
       font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
       opacity: 1;
@@ -155,10 +179,12 @@
   </div>
   <header class="topbar">
     <div class="brand">
-      <div class="logo">🌿</div>
+      <div class="logo">
+        <img class="logo-mark" src="assets/icons/icon-192.png" alt="Logo TOGA" />
+      </div>
       <div>
         <div class="title">TOGA RT 09</div>
-        <div class="subtitle">Scan QR untuk info tanaman obat keluarga</div>
+        <div class="subtitle">Kebun Obat Keluarga • RT 09 PKK</div>
       </div>
     </div>
   </header>
@@ -179,6 +205,22 @@
     </section>
 
     <section id="stateList" class="hidden reveal">
+      <article class="hero-panel">
+        <div class="hero-copy">
+          <p class="hero-kicker">TOGA RT 09</p>
+          <h3 class="hero-title">Cari tanaman baru lebih cepat.</h3>
+          <p class="hero-desc">Scan marker di menu AR untuk lihat detail instan.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="hero-link" href="ar.html">
+            <span>Mulai Scan AR</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </div>
+      </article>
+
       <div class="list-head">
         <h2 class="section-title">Daftar Tanaman</h2>
         <p id="listCount" class="list-count"></p>
@@ -242,9 +284,9 @@
     </section>
   </main>
 
-  <footer class="footer">
+  <!-- <footer class="footer">
     <small>© RT 09 & PKK • Sistem Informasi TOGA berbasis QR</small>
-  </footer>
+  </footer> -->
 
   <nav class="bottom-nav" aria-label="Menu utama">
     <ul class="bottom-nav-list">
@@ -303,6 +345,7 @@
     </div>
   </aside>
 
+  <script src="assets/theme.js" defer></script>
   <script src="assets/pwa.js" defer></script>
   <script src="assets/app.js" defer></script>
 </body>
