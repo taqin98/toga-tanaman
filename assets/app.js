@@ -132,6 +132,17 @@ async function loadPlants() {
     return cached;
   }
 
+  // Prioritaskan data lokal agar konten cepat tampil, lalu refresh remote di belakang.
+  try {
+    const local = await fetchLocalPlants();
+    if (local.length > 0) {
+      refreshPlantsCache();
+      return local;
+    }
+  } catch (err) {
+    console.warn("Data lokal gagal dibaca:", err);
+  }
+
   try {
     const remote = await fetchRemoteJSON(`${API_URL}?mode=list`);
     const normalized = normalizePlantList(remote);
@@ -140,10 +151,10 @@ async function loadPlants() {
       return normalized;
     }
   } catch (err) {
-    console.warn("Remote list gagal, fallback lokal:", err);
+    console.warn("Remote list gagal:", err);
   }
 
-  return await fetchLocalPlants();
+  return [];
 }
 
 async function refreshPlantDetailCache(id) {
@@ -227,6 +238,8 @@ function makeListCard(item) {
   img.className = "thumb";
   img.src = resolveImg(item.gambar || "");
   img.alt = `Foto ${item.nama || ""}`;
+  img.width = 320;
+  img.height = 240;
   img.loading = "lazy";
   img.decoding = "async";
 
@@ -455,6 +468,9 @@ function renderDetail(plant) {
   const img = $("img");
   img.decoding = "async";
   img.fetchPriority = "high";
+  img.loading = "eager";
+  img.width = 1000;
+  img.height = 600;
   img.src = plant.gambar || "";
   $("nama").textContent = plant.nama || "-";
   $("latin").textContent = plant.nama_latin
