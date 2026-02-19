@@ -56,10 +56,7 @@
         theme = localStorage.getItem(key) || "";
       } catch (_) {}
       if (theme !== "dark" && theme !== "light") {
-        theme =
-          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
+        theme = "light";
       }
       document.documentElement.setAttribute("data-theme", theme);
       var meta = document.querySelector('meta[name="theme-color"]');
@@ -233,8 +230,8 @@
       <div class="toolbar">
         <div id="jenisFilters" class="filters" aria-label="Filter jenis tanaman"></div>
         <div class="view-toggle" role="group" aria-label="Mode tampilan daftar">
-          <button id="viewGrid" class="toggle-btn" type="button">Grid</button>
-          <button id="viewList" class="toggle-btn is-active" type="button">List</button>
+          <button id="viewGrid" class="toggle-btn is-active" type="button">Grid</button>
+          <button id="viewList" class="toggle-btn" type="button">List</button>
         </div>
       </div>
 

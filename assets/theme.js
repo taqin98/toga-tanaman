@@ -65,7 +65,8 @@
   }
 
   function getActiveTheme() {
-    return readStoredTheme() || detectSystemTheme();
+    // return readStoredTheme() || detectSystemTheme();
+    return readStoredTheme() || THEME_LIGHT;
   }
 
   function updateThemeColor(theme) {

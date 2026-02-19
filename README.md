@@ -28,22 +28,37 @@ Proyek ini menyediakan:
 ## Struktur Proyek
 ```txt
 .
-├── index.html                  # Halaman daftar + detail tanaman
+├── index.html                  # Halaman utama daftar + detail tanaman
 ├── ar.html                     # Halaman AR marker-based
+├── gallery.html                # Halaman galeri kegiatan
+├── profile.html                # Halaman profil tim/pengelola
+├── marker-generator.html       # Generator marker pattern
+├── print-markers.html          # Cetak marker QR/pattern
 ├── manifest.webmanifest        # Konfigurasi PWA
 ├── sw.js                       # Service worker + cache strategy
+├── README.md
+├── DEBUGGING.md
+├── package.json
 ├── data/
 │   └── plants.json             # Data fallback lokal
 ├── markers/
-│   ├── *.patt               # File marker AR per tanaman
+│   ├── *.patt                  # File marker AR per tanaman
+│   ├── qr/                     # Hasil QR marker per tanaman
 │   └── note.md
 ├── images/                     # Gambar tanaman lokal
+├── scripts/
+│   └── generate-qr-only.mjs    # Script generate QR marker
 └── assets/
     ├── app.js                  # Logic daftar/detail tanaman
+    ├── config.js               # Konfigurasi aplikasi
     ├── pwa.js                  # Registrasi service worker
-    ├── style.css
+    ├── theme.js                # Manajemen tema light/dark
+    ├── style.css               # Styling utama
     ├── icons/
-    └── screenshots/
+    ├── screenshots/
+    └── vendor/
+        ├── arjs/
+        └── pdfMake/
 ```
 
 ## Cara Menjalankan (XAMPP)
