@@ -286,47 +286,16 @@
       }
       .ar-dock {
         position: absolute;
-        left: 10px;
-        right: 10px;
+        left: 50%;
         bottom: calc(12px + env(safe-area-inset-bottom));
-        border-radius: 22px;
-        padding: 10px;
+        transform: translateX(-50%);
+        border-radius: 999px;
+        padding: 8px;
         background: linear-gradient(160deg, rgba(255, 255, 255, 0.93), rgba(241, 250, 239, 0.84));
         border: 1px solid rgba(255, 255, 255, 0.48);
         box-shadow: 0 16px 28px rgba(0, 0, 0, 0.24);
         backdrop-filter: blur(14px);
         pointer-events: auto;
-      }
-      .ar-thumb-strip {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
-        margin-bottom: 10px;
-      }
-      .ar-thumb {
-        display: block;
-        width: 100%;
-        height: 58px;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid rgba(71, 131, 83, 0.3);
-        background: rgba(223, 241, 224, 0.7);
-      }
-      .ar-thumb img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .ar-thumb.is-active {
-        border-color: rgba(72, 160, 90, 0.7);
-        box-shadow: 0 0 0 2px rgba(89, 177, 104, 0.28);
-      }
-      .ar-controls {
-        display: grid;
-        grid-template-columns: 44px 1fr 44px;
-        align-items: center;
-        gap: 10px;
       }
       .btn {
         border: 1px solid rgba(45, 138, 83, 0.35);
@@ -350,33 +319,26 @@
         height: 20px;
       }
       .btn-detail {
-        width: 56px;
-        height: 56px;
+        min-width: 180px;
+        height: 52px;
         margin: 0 auto;
         border-radius: 999px;
+        display: inline-flex;
         align-items: center;
+        gap: 8px;
         justify-content: center;
+        padding: 0 20px;
         pointer-events: auto;
         box-shadow: 0 12px 24px rgba(58, 109, 71, 0.28);
       }
       .btn-detail svg {
-        width: 26px;
-        height: 26px;
-      }
-      .ar-side-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        border: 1px solid rgba(45, 138, 83, 0.35);
-        background: rgba(248, 255, 246, 0.88);
-        color: #22593a;
-        display: grid;
-        place-items: center;
-        pointer-events: auto;
-      }
-      .ar-side-btn svg {
         width: 20px;
         height: 20px;
+      }
+      .btn-detail-text {
+        font-size: 14px;
+        line-height: 1;
+        letter-spacing: 0.2px;
       }
       html[data-theme="dark"] .hud {
         background: linear-gradient(145deg, rgba(18, 41, 28, 0.88), rgba(35, 75, 46, 0.78));
@@ -393,22 +355,12 @@
         background: linear-gradient(160deg, rgba(18, 31, 24, 0.92), rgba(13, 22, 17, 0.9));
         border-color: rgba(157, 203, 173, 0.2);
       }
-      html[data-theme="dark"] .ar-thumb {
-        background: rgba(25, 43, 32, 0.85);
-        border-color: rgba(157, 203, 173, 0.24);
-      }
       html[data-theme="dark"] .btn {
         background: linear-gradient(150deg, rgba(23, 42, 31, 0.96), rgba(18, 32, 24, 0.92));
         color: #d9efdf;
         border-color: rgba(157, 203, 173, 0.3);
       }
-      html[data-theme="dark"] .ar-side-btn {
-        background: rgba(23, 41, 30, 0.9);
-        color: #d9efdf;
-        border-color: rgba(157, 203, 173, 0.3);
-      }
       .btn:hover,
-      .ar-side-btn:hover,
       .ar-icon-btn:hover {
         transform: translateY(-1px);
       }
@@ -528,29 +480,14 @@
         <span class="ar-scan-line"></span>
       </div>
 
-      <div class="ar-dock">
-        <div id="arThumbs" class="ar-thumb-strip" aria-label="Preview tanaman"></div>
-        <div class="ar-controls">
-          <button class="ar-side-btn" type="button" aria-label="Informasi kamera">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 8v.01M10 11h2v5h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/>
-            </svg>
-          </button>
-          <a class="btn btn-detail" id="btnDetail" href="#" target="_blank" rel="noopener" aria-label="Buka detail tanaman">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M4.5 8A2.5 2.5 0 0 1 7 5.5h10A2.5 2.5 0 0 1 19.5 8v8A2.5 2.5 0 0 1 17 18.5H7A2.5 2.5 0 0 1 4.5 16V8Z" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M9 12h6M12 9v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </a>
-          <button class="ar-side-btn" type="button" aria-label="Galeri marker">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M4.5 7.5A2.5 2.5 0 0 1 7 5h10a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 17 19H7a2.5 2.5 0 0 1-2.5-2.5v-9Z" stroke="currentColor" stroke-width="1.6"/>
-              <path d="m8.5 14 2.2-2.4a1 1 0 0 1 1.46-.02L14 13.3l1.7-1.7a1 1 0 0 1 1.47.03L19 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="9.2" cy="9.3" r="1.1" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
+      <div class="ar-dock" id="arDock">
+        <a class="btn btn-detail" id="btnDetail" href="#" target="_blank" rel="noopener" aria-label="Buka detail tanaman">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4.5 8A2.5 2.5 0 0 1 7 5.5h10A2.5 2.5 0 0 1 19.5 8v8A2.5 2.5 0 0 1 17 18.5H7A2.5 2.5 0 0 1 4.5 16V8Z" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M9 12h6M12 9v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span class="btn-detail-text">Detail Tanaman</span>
+        </a>
       </div>
     </div>
 
@@ -619,8 +556,8 @@
       const hud = document.getElementById("hud");
       const btnBack = document.getElementById("btnBack");
       const btn = document.getElementById("btnDetail");
+      const arDock = document.getElementById("arDock");
       const btnDebugToggle = document.getElementById("btnDebugToggle");
-      const arThumbs = document.getElementById("arThumbs");
       const scanFrame = document.querySelector(".ar-scan-frame");
       const root = document.getElementById("root");
 
@@ -636,9 +573,7 @@
       const activeMarkers = new Map();
       const lostTimers = new Map();
       const plantById = new Map();
-      const scanHistoryIds = [];
       const debugEvents = [];
-      const MAX_SCAN_HISTORY = 3;
 
       if (btnDebugToggle && !DEBUG_MODE) {
         btnDebugToggle.style.visibility = "hidden";
@@ -647,52 +582,14 @@
 
       updateActiveUI();
 
-      function renderThumbStrip() {
-        if (!arThumbs) return;
-        arThumbs.innerHTML = "";
-        scanHistoryIds.forEach((historyId) => {
-          const plant = plantById.get(historyId);
-          if (!plant) return;
-          const id = safeStr(plant.id).trim();
-          if (!id) return;
-          const thumb = document.createElement("a");
-          thumb.className = "ar-thumb";
-          thumb.dataset.plantId = id;
-          thumb.href = `./?id=${encodeURIComponent(id)}`;
-          thumb.setAttribute("aria-label", `Buka ${safeStr(plant.nama || id)}`);
-
-          const img = document.createElement("img");
-          img.alt = safeStr(plant.nama || id);
-          img.loading = "lazy";
-          img.decoding = "async";
-          img.src = resolveImageSrc(safeStr(plant.gambar || ""));
-          thumb.appendChild(img);
-          arThumbs.appendChild(thumb);
-        });
-      }
-
       function setScanFrameVisible(visible) {
         if (!scanFrame) return;
         scanFrame.classList.toggle("is-hidden", !visible);
       }
 
-      function pushScanHistory(id) {
-        const cleanId = safeStr(id).trim();
-        if (!cleanId) return;
-        const existingIdx = scanHistoryIds.indexOf(cleanId);
-        if (existingIdx >= 0) scanHistoryIds.splice(existingIdx, 1);
-        scanHistoryIds.unshift(cleanId);
-        if (scanHistoryIds.length > MAX_SCAN_HISTORY) {
-          scanHistoryIds.length = MAX_SCAN_HISTORY;
-        }
-        renderThumbStrip();
-      }
-
-      function setActiveThumb(id) {
-        if (!arThumbs) return;
-        arThumbs.querySelectorAll(".ar-thumb").forEach((el) => {
-          el.classList.toggle("is-active", id && el.dataset.plantId === id);
-        });
+      function setDockVisible(visible) {
+        if (!arDock) return;
+        arDock.style.display = visible ? "block" : "none";
       }
 
       function logDebug(event, payload = {}) {
@@ -812,8 +709,8 @@
         btnBack.style.display = "grid";
         if (!top) {
           hud.textContent = "AR TOGA • Arahkan kamera ke marker pattern";
+          setDockVisible(false);
           btn.style.display = "none";
-          setActiveThumb("");
           btn.href = "#";
           setScanFrameVisible(true);
           return;
@@ -821,17 +718,14 @@
 
         hud.textContent = `Marker terdeteksi: ${top.nama}`;
         btn.href = top.detailUrl;
-        btn.style.display = "grid";
-        setActiveThumb(top.id || "");
+        setDockVisible(true);
+        btn.style.display = "inline-flex";
         setScanFrameVisible(false);
       }
 
       function setMarkerFound(id, nama, detailUrl) {
         clearLostTimer(id);
-        const wasActive = activeMarkers.has(id);
         activeMarkers.set(id, { id, nama, detailUrl });
-        if (!wasActive) pushScanHistory(id);
-        setActiveThumb(id);
         updateActiveUI();
         logDebug("markerFound", { id, nama });
       }
@@ -1073,7 +967,6 @@
               plantById.set(id, {
                 id,
                 nama: safeStr(p.nama || id),
-                gambar: safeStr(p.gambar || ""),
                 detailUrl: `./?id=${encodeURIComponent(id)}`,
               });
             }
@@ -1081,7 +974,6 @@
             if (marker) root.appendChild(marker);
           });
 
-          renderThumbStrip();
           setupDebugMode(plants);
           hud.textContent = "AR TOGA • Siap. Arahkan kamera ke marker pattern.";
         } catch (e) {
