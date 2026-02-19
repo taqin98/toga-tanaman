@@ -237,6 +237,11 @@
         background-size: 20% 20%;
         border: 1px solid rgba(255, 255, 255, 0.22);
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        opacity: 1;
+        transition: opacity 0.22s ease;
+      }
+      .ar-scan-frame.is-hidden {
+        opacity: 0;
       }
       .ar-scan-line {
         position: absolute;
@@ -616,6 +621,7 @@
       const btn = document.getElementById("btnDetail");
       const btnDebugToggle = document.getElementById("btnDebugToggle");
       const arThumbs = document.getElementById("arThumbs");
+      const scanFrame = document.querySelector(".ar-scan-frame");
       const root = document.getElementById("root");
 
       const debugPanel = document.getElementById("debugPanel");
@@ -630,7 +636,9 @@
       const activeMarkers = new Map();
       const lostTimers = new Map();
       const plantById = new Map();
+      const scanHistoryIds = [];
       const debugEvents = [];
+      const MAX_SCAN_HISTORY = 3;
 
       if (btnDebugToggle && !DEBUG_MODE) {
         btnDebugToggle.style.visibility = "hidden";
@@ -639,11 +647,12 @@
 
       updateActiveUI();
 
-      function renderThumbStrip(plants) {
+      function renderThumbStrip() {
         if (!arThumbs) return;
         arThumbs.innerHTML = "";
-        const selected = (plants || []).slice(0, 3);
-        selected.forEach((plant) => {
+        scanHistoryIds.forEach((historyId) => {
+          const plant = plantById.get(historyId);
+          if (!plant) return;
           const id = safeStr(plant.id).trim();
           if (!id) return;
           const thumb = document.createElement("a");
@@ -660,6 +669,23 @@
           thumb.appendChild(img);
           arThumbs.appendChild(thumb);
         });
+      }
+
+      function setScanFrameVisible(visible) {
+        if (!scanFrame) return;
+        scanFrame.classList.toggle("is-hidden", !visible);
+      }
+
+      function pushScanHistory(id) {
+        const cleanId = safeStr(id).trim();
+        if (!cleanId) return;
+        const existingIdx = scanHistoryIds.indexOf(cleanId);
+        if (existingIdx >= 0) scanHistoryIds.splice(existingIdx, 1);
+        scanHistoryIds.unshift(cleanId);
+        if (scanHistoryIds.length > MAX_SCAN_HISTORY) {
+          scanHistoryIds.length = MAX_SCAN_HISTORY;
+        }
+        renderThumbStrip();
       }
 
       function setActiveThumb(id) {
@@ -789,6 +815,7 @@
           btn.style.display = "none";
           setActiveThumb("");
           btn.href = "#";
+          setScanFrameVisible(true);
           return;
         }
 
@@ -796,11 +823,14 @@
         btn.href = top.detailUrl;
         btn.style.display = "grid";
         setActiveThumb(top.id || "");
+        setScanFrameVisible(false);
       }
 
       function setMarkerFound(id, nama, detailUrl) {
         clearLostTimer(id);
+        const wasActive = activeMarkers.has(id);
         activeMarkers.set(id, { id, nama, detailUrl });
+        if (!wasActive) pushScanHistory(id);
         setActiveThumb(id);
         updateActiveUI();
         logDebug("markerFound", { id, nama });
@@ -1038,11 +1068,20 @@
           }
 
           plants.forEach((p) => {
+            const id = safeStr(p.id).trim();
+            if (id) {
+              plantById.set(id, {
+                id,
+                nama: safeStr(p.nama || id),
+                gambar: safeStr(p.gambar || ""),
+                detailUrl: `./?id=${encodeURIComponent(id)}`,
+              });
+            }
             const marker = makeMarker(p);
             if (marker) root.appendChild(marker);
           });
 
-          renderThumbStrip(plants);
+          renderThumbStrip();
           setupDebugMode(plants);
           hud.textContent = "AR TOGA • Siap. Arahkan kamera ke marker pattern.";
         } catch (e) {
