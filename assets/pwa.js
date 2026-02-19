@@ -140,18 +140,120 @@
     setTimeout(hideSplash, 5000);
   }
 
+  let refreshingAfterUpdate = false;
+
+  function promptServiceWorkerUpdate(registration) {
+    if (!registration || !registration.waiting) return;
+    const shouldUpdate = window.confirm(
+      "Versi terbaru aplikasi tersedia. Muat ulang sekarang?"
+    );
+    if (!shouldUpdate) return;
+    registration.waiting.postMessage({ type: "SKIP_WAITING" });
+  }
+
+  function bindServiceWorkerUpdates(registration) {
+    if (!registration) return;
+
+    if (registration.waiting) {
+      promptServiceWorkerUpdate(registration);
+    }
+
+    registration.addEventListener("updatefound", () => {
+      const newWorker = registration.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener("statechange", () => {
+        if (newWorker.state !== "installed") return;
+        if (!navigator.serviceWorker.controller) return;
+        promptServiceWorkerUpdate(registration);
+      });
+    });
+
+    setInterval(() => {
+      registration.update().catch(() => {});
+    }, 60 * 60 * 1000);
+  }
+
   if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshingAfterUpdate) return;
+      refreshingAfterUpdate = true;
+      window.location.reload();
+    });
+
     window.addEventListener("load", () => {
       navigator.serviceWorker
         .register("./sw.js")
         .then((registration) => {
           console.log("SW registered:", registration.scope);
+          bindServiceWorkerUpdates(registration);
         })
         .catch((error) => {
           console.log("SW registration failed:", error);
         });
     });
   }
+
+  function initConnectionBanner() {
+    const banner = document.createElement("div");
+    banner.setAttribute("role", "status");
+    banner.setAttribute("aria-live", "polite");
+    banner.style.position = "fixed";
+    banner.style.left = "50%";
+    banner.style.top = "12px";
+    banner.style.transform = "translateX(-50%)";
+    banner.style.zIndex = "10001";
+    banner.style.padding = "8px 12px";
+    banner.style.borderRadius = "999px";
+    banner.style.fontSize = "12px";
+    banner.style.fontWeight = "700";
+    banner.style.transition = "opacity 180ms ease";
+    banner.style.pointerEvents = "none";
+    banner.style.opacity = "0";
+    banner.style.display = "none";
+    document.body.appendChild(banner);
+
+    let hideTimer = null;
+
+    const show = (message, kind, autoHideMs = 0) => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      banner.textContent = message;
+      if (kind === "offline") {
+        banner.style.background = "rgba(140, 35, 35, 0.92)";
+        banner.style.color = "#fff";
+      } else {
+        banner.style.background = "rgba(31, 122, 62, 0.92)";
+        banner.style.color = "#fff";
+      }
+      banner.style.display = "block";
+      banner.style.opacity = "1";
+
+      if (autoHideMs > 0) {
+        hideTimer = setTimeout(() => {
+          banner.style.opacity = "0";
+          setTimeout(() => {
+            banner.style.display = "none";
+          }, 220);
+        }, autoHideMs);
+      }
+    };
+
+    const sync = () => {
+      if (navigator.onLine) {
+        show("Koneksi kembali online.", "online", 2400);
+        return;
+      }
+      show("Anda sedang offline. Data mungkin terbatas dari cache.", "offline");
+    };
+
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    if (!navigator.onLine) sync();
+  }
+
+  initConnectionBanner();
 
   const bannerEl = document.getElementById("installBanner");
   const installBtn = document.getElementById("installBtn");

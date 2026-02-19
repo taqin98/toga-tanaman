@@ -34,6 +34,7 @@ Proyek ini menyediakan:
 ├── profile.html                # Halaman profil tim/pengelola
 ├── marker-generator.html       # Generator marker pattern
 ├── print-markers.html          # Cetak marker QR/pattern
+├── offline.html                # Fallback halaman saat offline
 ├── manifest.webmanifest        # Konfigurasi PWA
 ├── sw.js                       # Service worker + cache strategy
 ├── README.md
