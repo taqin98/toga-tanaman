@@ -543,6 +543,76 @@ function setupListInteractions(plants) {
   applyFilter();
 }
 
+function sanitizeRichText(rawHtml) {
+  const source = String(rawHtml || "");
+  if (!source.trim()) return "";
+
+  const allowedTags = new Set([
+    "P",
+    "BR",
+    "STRONG",
+    "EM",
+    "B",
+    "I",
+    "U",
+    "UL",
+    "OL",
+    "LI",
+    "A",
+  ]);
+  const template = document.createElement("template");
+  template.innerHTML = source;
+
+  const cleanNode = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return document.createTextNode(node.textContent || "");
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return document.createTextNode("");
+    }
+
+    const tag = node.tagName.toUpperCase();
+    if (!allowedTags.has(tag)) {
+      const fragment = document.createDocumentFragment();
+      Array.from(node.childNodes).forEach((child) => {
+        const cleanChild = cleanNode(child);
+        if (cleanChild) fragment.appendChild(cleanChild);
+      });
+      return fragment;
+    }
+
+    const cleanEl = document.createElement(tag.toLowerCase());
+    if (tag === "A") {
+      const href = String(node.getAttribute("href") || "").trim();
+      if (/^(https?:|mailto:|tel:)/i.test(href)) {
+        cleanEl.setAttribute("href", href);
+      }
+      cleanEl.setAttribute("target", "_blank");
+      cleanEl.setAttribute("rel", "noopener noreferrer");
+
+      const title = String(node.getAttribute("title") || "").trim();
+      if (title) cleanEl.setAttribute("title", title);
+    }
+
+    Array.from(node.childNodes).forEach((child) => {
+      const cleanChild = cleanNode(child);
+      if (cleanChild) cleanEl.appendChild(cleanChild);
+    });
+    return cleanEl;
+  };
+
+  const out = document.createDocumentFragment();
+  Array.from(template.content.childNodes).forEach((node) => {
+    const clean = cleanNode(node);
+    if (clean) out.appendChild(clean);
+  });
+
+  const wrap = document.createElement("div");
+  wrap.appendChild(out);
+  return wrap.innerHTML;
+}
+
 function renderDetail(plant) {
   const img = $("img");
   img.decoding = "async";
@@ -561,7 +631,7 @@ function renderDetail(plant) {
   $("chipJenis").textContent = plant.jenis || "TOGA";
 
   setList($("manfaat"), plant.manfaat);
-  $("deskripsi").innerHTML = plant.deskripsi || "";
+  $("deskripsi").innerHTML = sanitizeRichText(plant.deskripsi || "");
   setList($("catatan"), plant.catatan);
 
   $("btnShare").onclick = async () => {

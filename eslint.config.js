@@ -13,6 +13,7 @@ export default [
       sourceType: "module",
       globals: {
         IntersectionObserver: "readonly",
+        Node: "readonly",
         window: "readonly",
         document: "readonly",
         navigator: "readonly",

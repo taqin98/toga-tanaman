@@ -5,6 +5,7 @@
   "scripts": {
     "qr:generate": "node scripts/generate-qr-only.mjs",
     "check:js": "node --check assets/app.js && node --check assets/pwa.js && node --check assets/theme.js && node --check assets/ar.js && node --check sw.js",
+    "smoke": "node scripts/smoke.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
