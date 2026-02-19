@@ -187,6 +187,8 @@
   </header>
 
   <main class="container">
+    <div id="dataSourceNotice" class="data-source-note hidden" role="status" aria-live="polite"></div>
+
     <section id="stateLoading" class="card reveal">
       <div class="skeleton-img"></div>
       <div class="skeleton-line w60"></div>
@@ -196,8 +198,8 @@
     </section>
 
     <section id="stateError" class="card hidden reveal">
-      <h2>Tanaman tidak ditemukan</h2>
-      <p>Cek kembali QR Code atau parameter <code>?id=...</code>.</p>
+      <h2 id="stateErrorTitle">Tanaman tidak ditemukan</h2>
+      <p id="stateErrorDesc">Cek kembali QR Code atau parameter <code>?id=...</code>.</p>
       <a class="btn" href="./">Lihat daftar tanaman</a>
     </section>
 

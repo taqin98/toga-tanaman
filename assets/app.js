@@ -145,7 +145,7 @@ async function loadPlants() {
   const cached = normalizePlantList(readCache(CACHE_KEYS.list));
   if (cached.length > 0) {
     refreshPlantsCache();
-    return cached;
+    return { plants: cached, source: "cache" };
   }
 
   // Prioritaskan data lokal agar konten cepat tampil, lalu refresh remote di belakang.
@@ -153,7 +153,7 @@ async function loadPlants() {
     const local = await fetchLocalPlants();
     if (local.length > 0) {
       refreshPlantsCache();
-      return local;
+      return { plants: local, source: "local" };
     }
   } catch (err) {
     console.warn("Data lokal gagal dibaca:", err);
@@ -164,13 +164,13 @@ async function loadPlants() {
     const normalized = normalizePlantList(remote);
     if (normalized.length > 0) {
       writeCache(CACHE_KEYS.list, normalized);
-      return normalized;
+      return { plants: normalized, source: "remote" };
     }
   } catch (err) {
     console.warn("Remote list gagal:", err);
   }
 
-  return [];
+  return { plants: [], source: "empty" };
 }
 
 async function refreshPlantDetailCache(id) {
@@ -191,13 +191,13 @@ async function loadPlantDetail(id, fallbackMap) {
   const cached = normalizePlant(readCache(CACHE_KEYS.detail(id)));
   if (cached) {
     refreshPlantDetailCache(id);
-    return cached;
+    return { plant: cached, source: "cache" };
   }
 
   const fallback = fallbackMap.get(id) || null;
   if (fallback) {
     refreshPlantDetailCache(id);
-    return fallback;
+    return { plant: fallback, source: "list-fallback" };
   }
 
   try {
@@ -207,13 +207,13 @@ async function loadPlantDetail(id, fallbackMap) {
     const normalized = normalizePlant(remote);
     if (normalized) {
       writeCache(CACHE_KEYS.detail(id), normalized);
-      return normalized;
+      return { plant: normalized, source: "remote" };
     }
   } catch (err) {
     console.warn("Remote detail gagal, fallback list map:", err);
   }
 
-  return null;
+  return { plant: null, source: "empty" };
 }
 
 function setList(el, items) {
@@ -584,11 +584,48 @@ function renderDetail(plant) {
   };
 }
 
+function setDataSourceNotice(source) {
+  const el = $("dataSourceNotice");
+  if (!el) return;
+
+  el.classList.remove("hidden", "is-warning", "is-danger");
+  if (source === "remote") {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+
+  if (source === "cache") {
+    el.textContent = "Menampilkan data dari cache lokal perangkat.";
+    el.classList.add("is-warning");
+    return;
+  }
+
+  if (source === "local" || source === "list-fallback") {
+    el.textContent =
+      "Menampilkan data fallback lokal. Beberapa informasi bisa belum terbaru.";
+    el.classList.add("is-warning");
+    return;
+  }
+
+  el.textContent = "Data tidak tersedia dari server maupun cache lokal.";
+  el.classList.add("is-danger");
+}
+
+function setErrorState(title, desc) {
+  const titleEl = $("stateErrorTitle");
+  const descEl = $("stateErrorDesc");
+  if (titleEl) titleEl.textContent = title;
+  if (descEl) descEl.innerHTML = desc;
+}
+
 async function main() {
   show("stateLoading");
 
   try {
-    const plants = await loadPlants();
+    const listResult = await loadPlants();
+    const plants = listResult.plants;
+    setDataSourceNotice(listResult.source);
     const byId = new Map(plants.map((item) => [item.id, item]));
     const id = getParam("id");
 
@@ -600,7 +637,9 @@ async function main() {
       return;
     }
 
-    const plant = await loadPlantDetail(id, byId);
+    const detailResult = await loadPlantDetail(id, byId);
+    const plant = detailResult.plant;
+    setDataSourceNotice(detailResult.source);
     if (!plant) throw new Error("Tanaman tidak ditemukan");
 
     renderDetail(plant);
@@ -617,9 +656,27 @@ async function main() {
       if (hasMissing && hasFresh) {
         renderDetail(fresh);
       }
+      setDataSourceNotice("remote");
     });
   } catch (err) {
     console.error(err);
+    if (navigator.onLine === false) {
+      setErrorState(
+        "Anda sedang offline",
+        "Koneksi internet tidak tersedia. Coba lagi saat online, atau buka halaman yang sudah tersimpan di cache."
+      );
+      setDataSourceNotice("empty");
+    } else if (String(err && err.message || "").toLowerCase().includes("tidak ditemukan")) {
+      setErrorState(
+        "Tanaman tidak ditemukan",
+        "Cek kembali QR Code atau parameter <code>?id=...</code>."
+      );
+    } else {
+      setErrorState(
+        "Gagal memuat data tanaman",
+        "Terjadi kendala saat mengambil data. Coba muat ulang halaman atau periksa API."
+      );
+    }
     show("stateError");
   }
 }

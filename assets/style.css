@@ -153,6 +153,36 @@ html[data-theme="dark"] .topbar {
   padding: 14px 14px calc(130px + env(safe-area-inset-bottom));
 }
 
+.data-source-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(39, 99, 61, 0.2);
+  background: rgba(255, 255, 255, 0.66);
+  color: #1c5a3b;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(46, 99, 66, 0.1);
+}
+
+.data-source-note.is-warning {
+  border-color: rgba(140, 87, 22, 0.28);
+  color: #734610;
+  background: rgba(255, 247, 226, 0.9);
+}
+
+.data-source-note.is-danger {
+  border-color: rgba(148, 39, 39, 0.3);
+  color: #7b1f1f;
+  background: rgba(255, 235, 235, 0.92);
+}
+
+html[data-theme="dark"] .data-source-note {
+  border-color: rgba(166, 209, 181, 0.2);
+  background: rgba(20, 32, 25, 0.76);
+  color: #d8eee0;
+}
+
 .card {
   border-radius: var(--radius);
   border: 1px solid var(--line-soft);

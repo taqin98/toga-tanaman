@@ -547,6 +547,7 @@
         );
 
       const LOST_DEBOUNCE_MS = 350;
+      const FOUND_EVENT_THROTTLE_MS = 220;
       const DEBUG_MODE =
         new URLSearchParams(window.location.search).get("debug") === "1";
 
@@ -569,8 +570,11 @@
 
       const activeMarkers = new Map();
       const lostTimers = new Map();
+      const markerLastFoundAt = new Map();
       const plantById = new Map();
       const debugEvents = [];
+      let scanState = "loading";
+      let arDataSource = "remote";
 
       if (btnDebugToggle && !DEBUG_MODE) {
         btnDebugToggle.style.visibility = "hidden";
@@ -589,6 +593,16 @@
         arDock.style.display = visible ? "block" : "none";
       }
 
+      function dataSourceHint(source) {
+        if (source === "cache") return " • sumber cache";
+        if (source === "local") return " • sumber lokal";
+        return "";
+      }
+
+      function setHudText(message) {
+        hud.textContent = `${message}${dataSourceHint(arDataSource)}`;
+      }
+
       function logDebug(event, payload = {}) {
         if (!DEBUG_MODE) return;
         debugEvents.push({
@@ -597,6 +611,12 @@
           ...payload,
         });
         debugLogEl.textContent = JSON.stringify(debugEvents, null, 2);
+      }
+
+      function setScanState(nextState) {
+        if (scanState === nextState) return;
+        scanState = nextState;
+        logDebug("scanState", { state: nextState });
       }
 
       function normalizeList(value) {
@@ -705,7 +725,8 @@
         const top = activeMarkers.values().next().value;
         btnBack.style.display = "grid";
         if (!top) {
-          hud.textContent = "AR TOGA • Arahkan kamera ke marker pattern";
+          setScanState("scanning");
+          setHudText("AR TOGA • Arahkan kamera ke marker pattern");
           setDockVisible(false);
           btn.style.display = "none";
           btn.href = "#";
@@ -713,7 +734,8 @@
           return;
         }
 
-        hud.textContent = `Marker terdeteksi: ${top.nama}`;
+        setScanState("found");
+        setHudText(`Marker terdeteksi: ${top.nama}`);
         btn.href = top.detailUrl;
         setDockVisible(true);
         btn.style.display = "inline-flex";
@@ -722,6 +744,12 @@
 
       function setMarkerFound(id, nama, detailUrl) {
         clearLostTimer(id);
+        const now = Date.now();
+        const lastSeenAt = markerLastFoundAt.get(id) || 0;
+        markerLastFoundAt.set(id, now);
+        if (activeMarkers.has(id) && now - lastSeenAt < FOUND_EVENT_THROTTLE_MS) {
+          return;
+        }
         activeMarkers.set(id, { id, nama, detailUrl });
         updateActiveUI();
         logDebug("markerFound", { id, nama });
@@ -731,6 +759,7 @@
         clearLostTimer(id);
         const timer = setTimeout(() => {
           activeMarkers.delete(id);
+          markerLastFoundAt.delete(id);
           lostTimers.delete(id);
           updateActiveUI();
           logDebug("markerLost", { id });
@@ -927,7 +956,7 @@
               if (plants.length > 0) writeCache(CACHE_KEY_AR_LIST, plants);
             })
             .catch(() => {});
-          return cachedPlants;
+          return { plants: cachedPlants, source: "cache" };
         }
 
         // AR mode: ambil data full agar text manfaat bisa tampil.
@@ -938,23 +967,30 @@
             : Object.values(dataset || {});
           if (plants.length > 0) {
             writeCache(CACHE_KEY_AR_LIST, plants);
-            return plants;
+            return { plants, source: "remote" };
           }
         } catch (error) {
           console.warn("Remote API gagal, fallback ke data lokal", error);
         }
 
         const local = await fetchJSON(LOCAL_DATA_URL);
-        return Array.isArray(local) ? local : Object.values(local || {});
+        return {
+          plants: Array.isArray(local) ? local : Object.values(local || {}),
+          source: "local",
+        };
       }
 
       async function main() {
-        hud.textContent = "AR TOGA • Memuat data tanaman...";
+        setScanState("loading");
+        setHudText("AR TOGA • Memuat data tanaman...");
         try {
-          const plants = await loadPlants();
+          const result = await loadPlants();
+          const plants = result.plants;
+          arDataSource = result.source || "remote";
 
           if (!plants.length) {
-            hud.textContent = "AR TOGA • Data tanaman kosong";
+            setScanState("error");
+            setHudText("AR TOGA • Data tanaman kosong");
             return;
           }
 
@@ -972,11 +1008,16 @@
           });
 
           setupDebugMode(plants);
-          hud.textContent = "AR TOGA • Siap. Arahkan kamera ke marker pattern.";
+          setScanState("scanning");
+          setHudText("AR TOGA • Siap. Arahkan kamera ke marker pattern.");
         } catch (e) {
           console.error(e);
-          hud.textContent =
-            "AR TOGA • Gagal memuat data (cek koneksi/API/data lokal).";
+          setScanState("error");
+          if (navigator.onLine === false) {
+            setHudText("AR TOGA • Offline. Gunakan data cache/lokal jika tersedia.");
+            return;
+          }
+          setHudText("AR TOGA • Gagal memuat data (cek koneksi/API/data lokal).");
         }
       }
 
