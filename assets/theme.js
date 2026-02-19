@@ -57,15 +57,7 @@
     }
   }
 
-  function detectSystemTheme() {
-    return window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? THEME_DARK
-      : THEME_LIGHT;
-  }
-
   function getActiveTheme() {
-    // return readStoredTheme() || detectSystemTheme();
     return readStoredTheme() || THEME_LIGHT;
   }
 

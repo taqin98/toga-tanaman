@@ -40,6 +40,9 @@ Proyek ini menyediakan:
 ├── README.md
 ├── DEBUGGING.md
 ├── package.json
+├── eslint.config.js
+├── .prettierrc.json
+├── .prettierignore
 ├── data/
 │   └── plants.json             # Data fallback lokal
 ├── markers/
@@ -50,6 +53,7 @@ Proyek ini menyediakan:
 ├── scripts/
 │   └── generate-qr-only.mjs    # Script generate QR marker
 └── assets/
+    ├── ar.js                   # Logic AR (marker + UI state)
     ├── app.js                  # Logic daftar/detail tanaman
     ├── config.js               # Konfigurasi aplikasi
     ├── pwa.js                  # Registrasi service worker

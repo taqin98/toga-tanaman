@@ -3,9 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "qr:generate": "node scripts/generate-qr-only.mjs"
+    "qr:generate": "node scripts/generate-qr-only.mjs",
+    "check:js": "node --check assets/app.js && node --check assets/pwa.js && node --check assets/theme.js && node --check assets/ar.js && node --check sw.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.2"
   }
 }
