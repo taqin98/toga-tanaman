@@ -14,7 +14,16 @@ const LIST_STATE = {
 };
 const LIST_PAGE_SIZE = 10;
 const SUPPORTS_INTERSECTION_OBSERVER = "IntersectionObserver" in window;
+const USER_AGENT =
+  typeof navigator === "object" && typeof navigator.userAgent === "string"
+    ? navigator.userAgent
+    : "";
+const IS_IOS_WEBKIT =
+  /iphone|ipad|ipod/i.test(USER_AGENT) &&
+  /applewebkit/i.test(USER_AGENT) &&
+  !/crios|fxios|edgios|opios/i.test(USER_AGENT);
 const SUPPORTS_WEBP = (() => {
+  if (IS_IOS_WEBKIT) return false;
   try {
     return (
       document
