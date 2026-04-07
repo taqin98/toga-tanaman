@@ -497,7 +497,7 @@ function getFilteredPlants(plants) {
     const q = LIST_STATE.query.trim().toLowerCase();
     if (!q) return true;
 
-    const haystack = `${item.nama} ${item.nama_latin} ${item.jenis}`.toLowerCase();
+    const haystack = `${item.nama} ${item.nama_latin} ${item.deskripsi} ${item.manfaat.join(' ')} ${item.jenis}`.toLowerCase();
     return haystack.includes(q);
   });
 }
