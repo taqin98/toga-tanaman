@@ -1,5 +1,10 @@
-const API_URL =
+const DEFAULT_API_URL =
   "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+const API_URL =
+  typeof window.TOGA_CONFIG?.apiUrl === "string" &&
+  window.TOGA_CONFIG.apiUrl.trim()
+    ? window.TOGA_CONFIG.apiUrl.trim()
+    : DEFAULT_API_URL;
 const LOCAL_DATA_URL = "data/plants.json";
 const FETCH_TIMEOUT_MS = 12000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -40,7 +45,12 @@ const THUMB_SIZES =
   "(min-width: 920px) 150px, (min-width: 640px) 120px, 80px";
 const HERO_SIZES = "100vw";
 const MIN_SPINNER_MS = 320;
+const LIST_THUMB_ROOT_MARGIN = "220px 0px";
+const LIST_THUMB_MAX_CONCURRENT = 2;
 let listIntersectionObserver = null;
+let listThumbObserver = null;
+let pendingListThumbs = [];
+let activeListThumbLoads = 0;
 let filteredPlantsCache = [];
 let visiblePlantsCount = LIST_PAGE_SIZE;
 let lastRenderedCount = 0;
@@ -286,8 +296,82 @@ function getImageVariants(src) {
   };
 }
 
+function getListThumbWidth() {
+  return LIST_STATE.view === "grid" ? 240 : 160;
+}
+
+function createThumbPlaceholder(width = 320, height = 240) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect width="100%" height="100%" fill="#edf5ea"/>
+      <rect x="24" y="24" width="${width - 48}" height="${height - 48}" rx="18" fill="#dbead7"/>
+      <circle cx="${Math.round(width * 0.34)}" cy="${Math.round(height * 0.42)}" r="18" fill="#c3ddbd"/>
+      <path d="M72 ${height - 70}l42-42 30 30 48-56 56 68z" fill="#b1d2aa"/>
+    </svg>
+  `.trim();
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+const LIST_THUMB_PLACEHOLDER = createThumbPlaceholder();
+
+function sanitizeThumbWidth(preferredWidth, fallbackWidth = 240) {
+  const width = Number(preferredWidth) || fallbackWidth;
+  return Math.max(120, Math.min(width, 1000));
+}
+
+function extractGoogleDriveFileId(src) {
+  const clean = resolveImg(src);
+  if (!clean || !/^https?:\/\//i.test(clean)) return "";
+
+  let url;
+  try {
+    url = new URL(clean, window.location.href);
+  } catch (_) {
+    return "";
+  }
+
+  const host = url.hostname.toLowerCase();
+  if (
+    !host.includes("drive.google.com") &&
+    !host.includes("drive.usercontent.google.com") &&
+    !host.includes("docs.google.com") &&
+    !host.includes("lh3.googleusercontent.com")
+  ) {
+    return "";
+  }
+
+  const idFromQuery = url.searchParams.get("id");
+  if (idFromQuery) return idFromQuery;
+
+  const matchers = [
+    /\/thumbnail\/d\/([^/?]+)/i,
+    /\/file\/d\/([^/?]+)/i,
+    /\/d\/([^/?]+)/i,
+  ];
+
+  for (const pattern of matchers) {
+    const match = url.pathname.match(pattern);
+    if (match && match[1]) return match[1];
+  }
+
+  return "";
+}
+
+function buildDriveThumbProxyUrl(fileId, preferredWidth) {
+  const width = sanitizeThumbWidth(preferredWidth);
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
+}
+
+function optimizeDriveThumbnail(src, preferredWidth) {
+  const clean = resolveImg(src);
+  const fileId = extractGoogleDriveFileId(clean);
+  if (!fileId) return clean;
+  return buildDriveThumbProxyUrl(fileId, preferredWidth);
+}
+
 function applyImageSources(img, src, { sizes, defaultWidth }) {
-  const variants = getImageVariants(src);
+  const variants = getImageVariants(optimizeDriveThumbnail(src, defaultWidth));
   if (!variants.base) {
     img.src = variants.src || "";
     img.srcset = "";
@@ -314,6 +398,142 @@ function applyImageSources(img, src, { sizes, defaultWidth }) {
   }
 }
 
+function setDeferredImageSources(img, src, { sizes, defaultWidth }) {
+  const optimizedSrc = optimizeDriveThumbnail(src, defaultWidth);
+  const variants = getImageVariants(optimizedSrc);
+  const fallbackWidth = defaultWidth || IMAGE_WIDTHS[1];
+  let resolvedSrc = "";
+  let resolvedSrcset = "";
+
+  if (!variants.base) {
+    resolvedSrc = variants.src || "";
+  } else if (SUPPORTS_WEBP) {
+    resolvedSrc = `${variants.base}-${fallbackWidth}.webp`;
+    resolvedSrcset = variants.webpSrcset;
+  } else {
+    resolvedSrc = `${variants.base}-${fallbackWidth}.${variants.ext}`;
+    resolvedSrcset = variants.srcset;
+  }
+
+  if (resolvedSrc) {
+    img.dataset.src = resolvedSrc;
+  } else {
+    delete img.dataset.src;
+  }
+
+  if (resolvedSrcset) {
+    img.dataset.srcset = resolvedSrcset;
+  } else {
+    delete img.dataset.srcset;
+  }
+
+  if (sizes) {
+    img.dataset.sizes = sizes;
+  } else {
+    delete img.dataset.sizes;
+  }
+}
+
+function finishListThumbLoad(img, failed = false) {
+  activeListThumbLoads = Math.max(activeListThumbLoads - 1, 0);
+  img.dataset.loaded = "1";
+  delete img.dataset.loading;
+  delete img.dataset.queued;
+
+  if (failed) {
+    img.removeAttribute("srcset");
+    img.removeAttribute("sizes");
+    img.src = LIST_THUMB_PLACEHOLDER;
+  }
+
+  flushListThumbQueue();
+}
+
+function hydrateDeferredImage(img) {
+  if (!img || img.tagName !== "IMG") return false;
+  if (!img.isConnected || img.dataset.loaded === "1" || img.dataset.loading === "1") {
+    return false;
+  }
+
+  const src = img.dataset.src || "";
+  if (!src) {
+    img.dataset.loaded = "1";
+    delete img.dataset.queued;
+    return false;
+  }
+
+  img.dataset.loading = "1";
+  img.addEventListener("load", () => finishListThumbLoad(img), { once: true });
+  img.addEventListener("error", () => finishListThumbLoad(img, true), {
+    once: true,
+  });
+
+  if (img.dataset.srcset) {
+    img.srcset = img.dataset.srcset;
+  } else {
+    img.removeAttribute("srcset");
+  }
+
+  if (img.dataset.sizes) {
+    img.sizes = img.dataset.sizes;
+  } else {
+    img.removeAttribute("sizes");
+  }
+
+  img.src = src;
+  return true;
+}
+
+function flushListThumbQueue() {
+  while (
+    activeListThumbLoads < LIST_THUMB_MAX_CONCURRENT &&
+    pendingListThumbs.length > 0
+  ) {
+    const nextImg = pendingListThumbs.shift();
+    if (!nextImg || !nextImg.isConnected || nextImg.dataset.loaded === "1") {
+      continue;
+    }
+    if (!hydrateDeferredImage(nextImg)) continue;
+    activeListThumbLoads += 1;
+  }
+}
+
+function ensureListThumbObserver() {
+  if (!SUPPORTS_INTERSECTION_OBSERVER || listThumbObserver) return;
+
+  listThumbObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const img = entry.target;
+        listThumbObserver.unobserve(img);
+        if (img.dataset.queued === "1" || img.dataset.loaded === "1") return;
+        img.dataset.queued = "1";
+        pendingListThumbs.push(img);
+      });
+      flushListThumbQueue();
+    },
+    {
+      root: null,
+      rootMargin: LIST_THUMB_ROOT_MARGIN,
+      threshold: 0.01,
+    }
+  );
+}
+
+function registerListThumb(img) {
+  if (!img || img.tagName !== "IMG") return;
+  if (!img.dataset.src) return;
+
+  if (!SUPPORTS_INTERSECTION_OBSERVER) {
+    hydrateDeferredImage(img);
+    return;
+  }
+
+  ensureListThumbObserver();
+  listThumbObserver.observe(img);
+}
+
 function makeListCard(item) {
   const a = document.createElement("a");
   a.href = `./?id=${encodeURIComponent(item.id)}`;
@@ -326,10 +546,13 @@ function makeListCard(item) {
   img.height = 240;
   img.loading = "lazy";
   img.decoding = "async";
-  applyImageSources(img, item.gambar || "", {
+  img.fetchPriority = "low";
+  img.src = LIST_THUMB_PLACEHOLDER;
+  setDeferredImageSources(img, item.gambar || "", {
     sizes: THUMB_SIZES,
-    defaultWidth: 320,
+    defaultWidth: getListThumbWidth(),
   });
+  registerListThumb(img);
 
 
   const wrap = document.createElement("div");

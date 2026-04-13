@@ -596,9 +596,15 @@
       </ul>
     </nav>
 
+    <script src="assets/config.js"></script>
     <script>
-      const API_URL =
+      const DEFAULT_API_URL =
         "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+      const API_URL =
+        typeof window.TOGA_CONFIG?.apiUrl === "string" &&
+        window.TOGA_CONFIG.apiUrl.trim()
+          ? window.TOGA_CONFIG.apiUrl.trim()
+          : DEFAULT_API_URL;
       const FETCH_TIMEOUT_MS = 12000;
       const CACHE_TTL_MS = 10 * 60 * 1000;
       const CACHE_KEY_GALLERY = "toga:gallery:list:v1";
@@ -629,27 +635,43 @@
           const url = new URL(input);
           const host = url.hostname.toLowerCase();
           const idFromQuery = url.searchParams.get("id");
+          const buildProxy = (id, width = 400) =>
+            `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${width}`;
 
           if (host.includes("drive.google.com")) {
             if (url.pathname.includes("/thumbnail")) {
               const id = idFromQuery;
-              if (id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w400`;
+              if (id) return buildProxy(id);
             }
 
             if (url.pathname.includes("/file/d/")) {
               const match = url.pathname.match(/\/file\/d\/([^/]+)/);
               if (match && match[1]) {
-                return `https://drive.google.com/thumbnail?id=${encodeURIComponent(match[1])}&sz=w400`;
+                return buildProxy(match[1]);
               }
             }
 
+            const genericMatch = url.pathname.match(/\/d\/([^/]+)/);
+            if (genericMatch && genericMatch[1]) {
+              return buildProxy(genericMatch[1]);
+            }
+
             if (idFromQuery) {
-              return `https://drive.google.com/thumbnail?id=${encodeURIComponent(idFromQuery)}&sz=w400`;
+              return buildProxy(idFromQuery);
             }
           }
 
-          if (host.includes("drive.usercontent.google.com") && idFromQuery) {
-            return `https://drive.google.com/thumbnail?id=${encodeURIComponent(idFromQuery)}&sz=w400`;
+          if (
+            host.includes("drive.usercontent.google.com") ||
+            host.includes("docs.google.com") ||
+            host.includes("lh3.googleusercontent.com")
+          ) {
+            if (idFromQuery) return buildProxy(idFromQuery);
+
+            const match = url.pathname.match(/\/d\/([^/]+)/);
+            if (match && match[1]) {
+              return buildProxy(match[1]);
+            }
           }
         } catch (_) {}
 

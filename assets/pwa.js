@@ -213,6 +213,7 @@
     document.body.appendChild(banner);
 
     let hideTimer = null;
+    let offlineTimer = null;
 
     const show = (message, kind, autoHideMs = 0) => {
       if (hideTimer) {
@@ -240,17 +241,45 @@
       }
     };
 
-    const sync = () => {
-      if (navigator.onLine) {
-        show("Koneksi kembali online.", "online", 2400);
-        return;
+    const hide = () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
       }
-      show("Anda sedang offline. Data mungkin terbatas dari cache.", "offline");
+      banner.style.opacity = "0";
+      setTimeout(() => {
+        banner.style.display = "none";
+      }, 220);
     };
 
-    window.addEventListener("online", sync);
-    window.addEventListener("offline", sync);
-    if (!navigator.onLine) sync();
+    const handleOnline = () => {
+      if (offlineTimer) {
+        clearTimeout(offlineTimer);
+        offlineTimer = null;
+      }
+      show("Koneksi kembali online.", "online", 2200);
+    };
+
+    const handleOffline = () => {
+      if (offlineTimer) {
+        clearTimeout(offlineTimer);
+      }
+      offlineTimer = setTimeout(() => {
+        offlineTimer = null;
+        if (navigator.onLine) {
+          hide();
+          return;
+        }
+        show(
+          "Koneksi bermasalah. Beberapa data mungkin memakai cache.",
+          "offline",
+          3600
+        );
+      }, 1200);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
   }
 
   initConnectionBanner();

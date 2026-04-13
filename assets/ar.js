@@ -1,5 +1,10 @@
-const API_URL =
+const DEFAULT_API_URL =
   "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+const API_URL =
+  typeof window.TOGA_CONFIG?.apiUrl === "string" &&
+  window.TOGA_CONFIG.apiUrl.trim()
+    ? window.TOGA_CONFIG.apiUrl.trim()
+    : DEFAULT_API_URL;
 const LOCAL_DATA_URL = "data/plants.json";
 const FETCH_TIMEOUT_MS = 12000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -115,19 +120,58 @@ function isHttpUrl(url) {
   return /^https?:\/\//i.test(url || "");
 }
 
+function sanitizeThumbWidth(preferredWidth, fallbackWidth = 400) {
+  const width = Number(preferredWidth) || fallbackWidth;
+  return Math.max(120, Math.min(width, 1000));
+}
+
+function extractGoogleDriveFileId(urlValue) {
+  const input = safeStr(urlValue).trim();
+  if (!input || !isHttpUrl(input)) return "";
+
+  let url;
+  try {
+    url = new URL(input, window.location.href);
+  } catch (_) {
+    return "";
+  }
+
+  const host = url.hostname.toLowerCase();
+  if (
+    !host.includes("drive.google.com") &&
+    !host.includes("drive.usercontent.google.com") &&
+    !host.includes("docs.google.com") &&
+    !host.includes("lh3.googleusercontent.com")
+  ) {
+    return "";
+  }
+
+  const idFromQuery = url.searchParams.get("id");
+  if (idFromQuery) return idFromQuery;
+
+  const matchers = [
+    /\/thumbnail\/d\/([^/?]+)/i,
+    /\/file\/d\/([^/?]+)/i,
+    /\/d\/([^/?]+)/i,
+  ];
+
+  for (const pattern of matchers) {
+    const match = url.pathname.match(pattern);
+    if (match && match[1]) return match[1];
+  }
+
+  return "";
+}
+
+function buildDriveThumbProxyUrl(fileId, preferredWidth) {
+  const width = sanitizeThumbWidth(preferredWidth);
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
+}
+
 function normalizeGoogleDriveUrl(url) {
-  if (!/drive\.google\.com/i.test(url)) return url;
-
-  const idMatch =
-    url.match(/[?&]id=([^&]+)/i) ||
-    url.match(/\/d\/([^/]+)/i) ||
-    url.match(/\/thumbnail\?id=([^&]+)/i);
-
-  const fileId = idMatch ? idMatch[1] : "";
+  const fileId = extractGoogleDriveFileId(url);
   if (!fileId) return url;
-
-  // direct image host that typically allows CORS for WebGL textures
-  return `https://lh3.googleusercontent.com/d/${fileId}`;
+  return buildDriveThumbProxyUrl(fileId, 400);
 }
 
 function resolveImageSrc(gambar) {

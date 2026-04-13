@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v12.2.0";
+const SW_VERSION = "toga-v12.6.0";
 
 const CACHE_NAMES = {
   appShell: `${SW_VERSION}-app-shell`,
@@ -59,6 +59,11 @@ self.addEventListener("fetch", (event) => {
 
   if (isApiRequest(url)) {
     event.respondWith(networkFirst(request, CACHE_NAMES.api));
+    return;
+  }
+
+  if (isGoogleDriveThumbnailRequest(url)) {
+    event.respondWith(cacheFirst(request, CACHE_NAMES.images));
     return;
   }
 
@@ -161,6 +166,10 @@ function isApiRequest(url) {
     url.hostname.includes("script.google.com") ||
     url.hostname.includes("script.googleusercontent.com")
   );
+}
+
+function isGoogleDriveThumbnailRequest(url) {
+  return url.hostname === "drive.google.com" && url.pathname === "/thumbnail";
 }
 
 async function cacheFirst(request, cacheName) {
