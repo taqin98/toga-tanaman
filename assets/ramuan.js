@@ -112,47 +112,8 @@ function publishRamuanContext() {
   );
 }
 
-function renderExampleCards() {
-  const wrap = document.getElementById("ramuanExampleGrid");
-  const countEl = document.getElementById("ramuanExampleCount");
-  if (!wrap) return;
-
-  wrap.innerHTML = "";
-  if (countEl) {
-    countEl.textContent = `${DUMMY_REMEDIES.length} contoh topik dummy siap dipakai sebagai konteks awal chat.`;
-  }
-
-  DUMMY_REMEDIES.forEach((item) => {
-    const article = document.createElement("article");
-    article.className = "ramuan-chat-card";
-
-    const badge = document.createElement("span");
-    badge.className = "chip chip-soft";
-    badge.textContent = item.kategori;
-
-    const title = document.createElement("h3");
-    title.className = "ramuan-chat-card__title";
-    title.textContent = item.judul;
-
-    const plants = document.createElement("p");
-    plants.className = "ramuan-chat-card__meta";
-    plants.textContent = `Tanaman: ${item.tanaman.join(", ")}`;
-
-    const desc = document.createElement("p");
-    desc.className = "ramuan-chat-card__desc";
-    desc.textContent = item.ringkas;
-
-    article.appendChild(badge);
-    article.appendChild(title);
-    article.appendChild(plants);
-    article.appendChild(desc);
-    wrap.appendChild(article);
-  });
-}
-
 function initRamuanPage() {
   publishRamuanContext();
-  renderExampleCards();
 }
 
 if (document.readyState === "loading") {

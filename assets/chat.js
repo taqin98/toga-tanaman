@@ -1,14 +1,12 @@
 (function () {
   const root = document.body;
   if (!root || root.dataset.aiChat === "off") return;
+  if (root.dataset.aiChatMode !== "page") return;
 
   const aiChatUrl = String(window.TOGA_CONFIG?.aiChatUrl || "").trim();
-  const mode = root.dataset.aiChatMode === "page" ? "page" : "widget";
-
   const STORAGE_KEY = `toga:ai-chat:${window.location.pathname}:history:v2`;
   const MAX_HISTORY = 12;
-  const mountTarget =
-    mode === "page" ? document.getElementById("aiChatMount") : document.body;
+  const mountTarget = document.getElementById("aiChatMount");
 
   if (!mountTarget) return;
 
@@ -111,18 +109,15 @@
   }
 
   const state = {
-    open: mode === "page",
     loading: false,
     history: readHistory(),
   };
 
   const host = document.createElement("div");
-  host.className = mode === "page" ? "ai-chat ai-chat--page" : "ai-chat";
+  host.className = "ai-chat ai-chat--page";
 
-  host.innerHTML =
-    mode === "page"
-      ? `
-    <section id="aiChatPanel" class="ai-chat__panel ai-chat__panel--page" aria-label="Asisten TOGA">
+  host.innerHTML = `
+    <section class="ai-chat__panel ai-chat__panel--page" aria-label="Asisten TOGA">
       <div class="ai-chat__head">
         <div>
           <strong class="ai-chat__title">Asisten TOGA</strong>
@@ -130,40 +125,12 @@
         </div>
       </div>
       <div class="ai-chat__suggestions"></div>
-      <div id="aiChatMessages" class="ai-chat__messages" aria-live="polite"></div>
-      <form id="aiChatForm" class="ai-chat__composer">
-        <textarea id="aiChatInput" class="ai-chat__input" rows="3" placeholder="Tulis pertanyaan tentang ramuan atau penggunaan tanaman..." maxlength="1000"></textarea>
+      <div class="ai-chat__messages" aria-live="polite"></div>
+      <form class="ai-chat__composer">
+        <textarea class="ai-chat__input" rows="3" placeholder="Tulis pertanyaan tentang ramuan atau penggunaan tanaman..." maxlength="1000"></textarea>
         <div class="ai-chat__actions">
-          <button id="aiChatReset" class="ai-chat__ghost" type="button">Reset</button>
-          <button id="aiChatSend" class="ai-chat__send" type="submit">Kirim</button>
-        </div>
-      </form>
-    </section>
-  `
-      : `
-    <button id="aiChatToggle" class="ai-chat__toggle" type="button" aria-expanded="false" aria-controls="aiChatPanel">
-      <span class="ai-chat__toggle-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M7 9.5h10M7 13h6m-7.5 6 2.2-3H18a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5V19Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-      <span>Chat TOGA</span>
-    </button>
-    <section id="aiChatPanel" class="ai-chat__panel hidden" aria-label="Asisten TOGA">
-      <div class="ai-chat__head">
-        <div>
-          <strong class="ai-chat__title">Asisten TOGA</strong>
-          <p class="ai-chat__subtitle">${getSubtitle(getPageContext())}</p>
-        </div>
-        <button id="aiChatClose" class="ai-chat__close" type="button" aria-label="Tutup chat">×</button>
-      </div>
-      <div class="ai-chat__suggestions"></div>
-      <div id="aiChatMessages" class="ai-chat__messages" aria-live="polite"></div>
-      <form id="aiChatForm" class="ai-chat__composer">
-        <textarea id="aiChatInput" class="ai-chat__input" rows="2" placeholder="Tulis pertanyaan..." maxlength="1000"></textarea>
-        <div class="ai-chat__actions">
-          <button id="aiChatReset" class="ai-chat__ghost" type="button">Reset</button>
-          <button id="aiChatSend" class="ai-chat__send" type="submit">Kirim</button>
+          <button class="ai-chat__ghost" data-ai-chat-reset type="button">Reset</button>
+          <button class="ai-chat__send" data-ai-chat-send type="submit">Kirim</button>
         </div>
       </form>
     </section>
@@ -171,14 +138,11 @@
 
   mountTarget.appendChild(host);
 
-  const toggleBtn = document.getElementById("aiChatToggle");
-  const panel = document.getElementById("aiChatPanel");
-  const closeBtn = document.getElementById("aiChatClose");
-  const messagesEl = document.getElementById("aiChatMessages");
-  const form = document.getElementById("aiChatForm");
-  const input = document.getElementById("aiChatInput");
-  const sendBtn = document.getElementById("aiChatSend");
-  const resetBtn = document.getElementById("aiChatReset");
+  const messagesEl = host.querySelector(".ai-chat__messages");
+  const form = host.querySelector(".ai-chat__composer");
+  const input = host.querySelector(".ai-chat__input");
+  const sendBtn = host.querySelector("[data-ai-chat-send]");
+  const resetBtn = host.querySelector("[data-ai-chat-reset]");
   const subtitleEl = host.querySelector(".ai-chat__subtitle");
   const suggestionsEl = host.querySelector(".ai-chat__suggestions");
 
@@ -219,8 +183,7 @@
   function renderSuggestions() {
     if (!suggestionsEl) return;
 
-    const limit = mode === "page" ? 6 : 3;
-    const suggestions = getSuggestions(getPageContext()).slice(0, limit);
+    const suggestions = getSuggestions(getPageContext()).slice(0, 6);
     suggestionsEl.innerHTML = suggestions
       .map(
         (prompt) =>
@@ -237,17 +200,6 @@
     renderSuggestions();
     if (state.history.length === 0) {
       renderMessages();
-    }
-  }
-
-  function setOpen(nextOpen) {
-    if (mode === "page") return;
-    state.open = nextOpen;
-    panel.classList.toggle("hidden", !nextOpen);
-    toggleBtn.setAttribute("aria-expanded", String(nextOpen));
-    if (nextOpen) {
-      input.focus();
-      scrollToBottom();
     }
   }
 
@@ -423,18 +375,6 @@
     await sendMessage(trimmed);
   }
 
-  if (toggleBtn) {
-    toggleBtn.addEventListener("click", () => {
-      setOpen(!state.open);
-    });
-  }
-
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      setOpen(false);
-    });
-  }
-
   resetBtn.addEventListener("click", () => {
     state.history = [];
     writeHistory(state.history);
@@ -456,7 +396,5 @@
   refreshContextUi();
   renderMessages();
   window.addEventListener("toga:page-context-change", refreshContextUi);
-  if (mode === "page") {
-    input.focus();
-  }
+  input.focus();
 })();

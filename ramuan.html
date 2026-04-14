@@ -61,52 +61,7 @@
   </header>
 
   <main class="container ramuan-chat-shell">
-    <section class="ramuan-chat-intro card reveal">
-      <div class="pad">
-        <div class="chips">
-          <span class="chip">Asisten Ramuan</span>
-          <span class="chip chip-soft">Data Dummy</span>
-        </div>
-        <h1 class="h1">Konsultasi ramuan TOGA dalam format chat penuh</h1>
-        <p class="desc">
-          Untuk halaman ramuan, UI yang lebih tepat adalah chat penuh, bukan daftar panjang seperti katalog kedua.
-          User biasanya datang dengan keluhan atau kebutuhan tertentu, lalu ingin langsung tahu tanaman yang relevan,
-          langkah sederhana, dan perhatian dasarnya.
-        </p>
-        <div class="ramuan-chat-grid">
-          <article class="ramuan-chat-note">
-            <h2 class="h3">Lebih cocok untuk alur tanya jawab</h2>
-            <p class="desc">
-              Misalnya: batuk ringan, badan meriang, mual ringan, atau sariawan. Chat bisa langsung mengarahkan ke
-              tanaman yang tersedia di TOGA dan langkah sederhananya.
-            </p>
-          </article>
-          <article class="ramuan-chat-note">
-            <h2 class="h3">Tetap ada konteks ramuan</h2>
-            <p id="ramuanExampleCount" class="desc">
-              Contoh topik dummy dimuat sebagai konteks awal agar jawaban tidak terlalu generik.
-            </p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="ramuan-chat-preview reveal" aria-labelledby="ramuanExampleHeading">
-      <div class="list-head">
-        <h2 id="ramuanExampleHeading" class="section-title">Contoh topik ramuan</h2>
-        <p class="list-count">Dipakai sebagai baseline konteks AI</p>
-      </div>
-      <div id="ramuanExampleGrid" class="ramuan-chat-examples"></div>
-    </section>
-
-    <section class="reveal">
-      <div id="aiChatMount"></div>
-    </section>
-
-    <div class="data-source-note is-warning">
-      Jawaban AI bersifat panduan umum berbasis data dummy dan konteks halaman. Untuk gejala berat, berkepanjangan,
-      atau mencurigakan, tetap arahkan ke tenaga kesehatan.
-    </div>
+    <div id="aiChatMount"></div>
   </main>
 
   <nav class="bottom-nav" aria-label="Menu utama">
