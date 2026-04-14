@@ -725,6 +725,60 @@ function getFilteredPlants(plants) {
   });
 }
 
+function summarizePlantForContext(plant) {
+  if (!plant || typeof plant !== "object") return null;
+
+  return {
+    id: plant.id || "",
+    nama: plant.nama || "-",
+    nama_latin: plant.nama_latin || "",
+    jenis: plant.jenis || "TOGA",
+    manfaat: Array.isArray(plant.manfaat) ? plant.manfaat.slice(0, 4) : [],
+    catatan: Array.isArray(plant.catatan) ? plant.catatan.slice(0, 3) : [],
+    deskripsi: String(plant.deskripsi || "").replace(/\s+/g, " ").trim().slice(0, 240),
+  };
+}
+
+function publishPageContext(context) {
+  window.TOGA_PAGE_CONTEXT = context;
+  window.dispatchEvent(new CustomEvent("toga:page-context-change", { detail: context }));
+}
+
+function updatePlantListContext(plants) {
+  publishPageContext({
+    page: "tanaman",
+    view: "list",
+    title: "Daftar Tanaman TOGA",
+    totalItems: plants.length,
+    filteredItems: filteredPlantsCache.length,
+    selectedJenis: LIST_STATE.jenis,
+    query: LIST_STATE.query.trim(),
+    visibleItems: filteredPlantsCache
+      .slice(0, Math.min(5, visiblePlantsCount))
+      .map(summarizePlantForContext)
+      .filter(Boolean),
+    suggestedPrompts: [
+      "Tanaman apa yang cocok untuk batuk ringan?",
+      "Jelaskan manfaat kunyit dan jahe secara singkat.",
+      "Bagaimana cara memakai daun sirih dengan aman?",
+    ],
+  });
+}
+
+function updatePlantDetailContext(plant) {
+  publishPageContext({
+    page: "tanaman",
+    view: "detail",
+    title: plant.nama || "Detail tanaman TOGA",
+    currentItem: summarizePlantForContext(plant),
+    suggestedPrompts: [
+      `Apa manfaat utama ${plant.nama || "tanaman ini"}?`,
+      `Bagaimana cara memakai ${plant.nama || "tanaman ini"} untuk penggunaan sederhana?`,
+      `Apa catatan dasar sebelum memakai ${plant.nama || "tanaman ini"}?`,
+    ],
+  });
+}
+
 function setupListInteractions(plants) {
   const input = $("searchInput");
   const jenisWrap = $("jenisFilters");
@@ -741,6 +795,7 @@ function setupListInteractions(plants) {
     filteredPlantsCache = getFilteredPlants(plants);
     resetListPagination();
     renderList(filteredPlantsCache, "reset");
+    updatePlantListContext(plants);
   };
 
   input.addEventListener("input", () => {
@@ -884,6 +939,8 @@ function renderDetail(plant) {
       window.prompt("Salin link ini:", url);
     }
   };
+
+  updatePlantDetailContext(plant);
 }
 
 function setDataSourceNotice(source) {

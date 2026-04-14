@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v12.6.0";
+const SW_VERSION = "toga-v12.9.0";
 
 const CACHE_NAMES = {
   appShell: `${SW_VERSION}-app-shell`,
@@ -12,6 +12,7 @@ const APP_SHELL_ASSETS = [
   "./index.html",
   "./ar.html",
   "./gallery.html",
+  "./ramuan.html",
   "./profile.html",
   "./marker-generator.html",
   "./print-markers.html",
@@ -20,7 +21,9 @@ const APP_SHELL_ASSETS = [
   "./assets/style.css",
   "./assets/config.js",
   "./assets/app.js",
+  "./assets/chat.js",
   "./assets/pwa.js",
+  "./assets/ramuan.js",
   "./assets/theme.js",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
@@ -153,6 +156,7 @@ function resolveNavigationAsset(requestUrl) {
   const path = relativePath.replace(/^\/+/, "");
   if (path === "" || path === "index.html") return "./index.html";
   if (path === "gallery.html") return "./gallery.html";
+  if (path === "ramuan.html") return "./ramuan.html";
   if (path === "ar.html") return "./ar.html";
   if (path === "profile.html") return "./profile.html";
   if (path === "marker-generator.html") return "./marker-generator.html";

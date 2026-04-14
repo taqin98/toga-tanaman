@@ -378,7 +378,7 @@
         margin: 0;
         padding: 0;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
       }
       .bottom-nav-item {
         display: flex;
@@ -546,6 +546,17 @@
           </a>
         </li>
         <li class="bottom-nav-item">
+          <a class="bottom-nav-link" href="ramuan.html">
+            <span class="bottom-nav-icon-wrap" aria-hidden="true">
+              <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
+                <path d="M7 4.5h10M9 4.5v3m6-3v3M7 9.5h10l-1.1 8.1a2 2 0 0 1-2 1.7h-3.8a2 2 0 0 1-2-1.7L7 9.5Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 13c.8.7 1.5 1 2 1s1.2-.3 2-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="bottom-nav-label">Ramuan</span>
+          </a>
+        </li>
+        <li class="bottom-nav-item">
           <a class="bottom-nav-link is-active" href="profile.html" aria-current="page">
             <span class="bottom-nav-icon-wrap" aria-hidden="true">
               <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
@@ -559,7 +570,9 @@
       </ul>
     </nav>
 
+    <script src="assets/config.js" defer></script>
     <script src="assets/theme.js" defer></script>
+    <script src="assets/chat.js" defer></script>
     <script src="assets/pwa.js" defer></script>
   </body>
 </html>

@@ -52,6 +52,7 @@ Proyek ini menyediakan:
 ├── images/                     # Gambar tanaman lokal
 ├── scripts/
 │   └── generate-qr-only.mjs    # Script generate QR marker
+├── vercel-ai-backend/          # Backend serverless OpenRouter untuk deploy ke Vercel
 └── assets/
     ├── ar.js                   # Logic AR (marker + UI state)
     ├── app.js                  # Logic daftar/detail tanaman
@@ -72,6 +73,19 @@ Proyek ini menyediakan:
 2. Jalankan Apache dari XAMPP.
 3. Buka browser:
    - `http://localhost/toga-tanaman/`
+
+## Backend AI Vercel
+Jika ingin menambahkan chat AI tanpa mengekspos API key di browser, gunakan folder:
+- `vercel-ai-backend/`
+
+Folder ini berisi template backend serverless OpenRouter untuk Vercel:
+- `api/chat.js`
+- `package.json`
+- `vercel.json`
+- `.env.example`
+
+Lihat panduan deploy dan contoh request di:
+- `vercel-ai-backend/README.md`
 
 ## URL Penting
 - Daftar tanaman: `http://localhost/toga-tanaman/`

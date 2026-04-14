@@ -364,7 +364,7 @@
         margin: 0;
         padding: 0;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
       }
       .bottom-nav-item {
         display: flex;
@@ -583,6 +583,17 @@
           </a>
         </li>
         <li class="bottom-nav-item">
+          <a class="bottom-nav-link" href="ramuan.html">
+            <span class="bottom-nav-icon-wrap" aria-hidden="true">
+              <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
+                <path d="M7 4.5h10M9 4.5v3m6-3v3M7 9.5h10l-1.1 8.1a2 2 0 0 1-2 1.7h-3.8a2 2 0 0 1-2-1.7L7 9.5Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 13c.8.7 1.5 1 2 1s1.2-.3 2-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="bottom-nav-label">Ramuan</span>
+          </a>
+        </li>
+        <li class="bottom-nav-item">
           <a class="bottom-nav-link" href="profile.html">
             <span class="bottom-nav-icon-wrap" aria-hidden="true">
               <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
@@ -626,6 +637,55 @@
       const previewDescEl = document.getElementById("previewDesc");
       let allItems = [];
       let visibleCount = 0;
+
+      function publishGalleryContext(context) {
+        window.TOGA_PAGE_CONTEXT = context;
+        window.dispatchEvent(
+          new CustomEvent("toga:page-context-change", { detail: context })
+        );
+      }
+
+      function summarizeGalleryItem(item) {
+        if (!item || typeof item !== "object") return null;
+
+        return {
+          id: item.id || "",
+          title: item.title || "-",
+          date: item.date || "-",
+          location: item.location || "-",
+          person: item.person || "-",
+          desc: String(item.desc || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 220),
+        };
+      }
+
+      function updateGalleryContext(view = "list", currentItem = null) {
+        publishGalleryContext({
+          page: "gallery",
+          view,
+          title: "Galeri Kegiatan TOGA",
+          totalItems: allItems.length,
+          visibleItems: allItems
+            .slice(0, Math.min(4, visibleCount))
+            .map(summarizeGalleryItem)
+            .filter(Boolean),
+          currentItem: summarizeGalleryItem(currentItem),
+          suggestedPrompts:
+            view === "detail" && currentItem
+              ? [
+                  `Ringkas isi dokumentasi ${currentItem.title}.`,
+                  `Apa kegiatan utama pada dokumentasi ini?`,
+                  `Apa manfaat kegiatan ini untuk warga?`,
+                ]
+              : [
+                  "Ringkas kegiatan TOGA yang terlihat di galeri.",
+                  "Jenis aktivitas warga apa saja yang terdokumentasi?",
+                  "Apa manfaat kegiatan TOGA untuk lingkungan RT?",
+                ],
+        });
+      }
 
       function normalizeDriveImageUrl(value) {
         const input = String(value || "").trim();
@@ -804,10 +864,12 @@
         previewMetaEl.textContent = `${item.date} • ${item.location} • ${item.person}`;
         previewDescEl.textContent = item.desc;
         modalEl.classList.add("is-open");
+        updateGalleryContext("detail", item);
       }
 
       function closePreview() {
         modalEl.classList.remove("is-open");
+        updateGalleryContext("list");
       }
 
       function renderGallery(items) {
@@ -849,6 +911,7 @@
         visibleCount = Math.min(visibleCount + PAGE_SIZE, allItems.length);
         renderGallery(allItems.slice(0, visibleCount));
         updateLoadMoreButton();
+        updateGalleryContext("list");
       }
 
       closeEl.addEventListener("click", closePreview);
@@ -871,6 +934,7 @@
 
       main();
     </script>
+    <script src="assets/chat.js" defer></script>
     <script src="assets/theme.js" defer></script>
     <script src="assets/pwa.js" defer></script>
   </body>
