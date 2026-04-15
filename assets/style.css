@@ -1054,6 +1054,155 @@ html[data-theme="dark"] .ai-chat__panel {
   white-space: pre-wrap;
 }
 
+.ai-chat__richtext {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-chat__richtext > * {
+  margin: 0;
+}
+
+.ai-chat__richtext p {
+  white-space: normal;
+}
+
+.ai-chat__richtext h1,
+.ai-chat__richtext h2,
+.ai-chat__richtext h3,
+.ai-chat__richtext h4 {
+  margin: 0;
+  line-height: 1.25;
+  color: inherit;
+  letter-spacing: -0.02em;
+}
+
+.ai-chat__richtext h1 {
+  font-size: 20px;
+}
+
+.ai-chat__richtext h2 {
+  font-size: 18px;
+}
+
+.ai-chat__richtext h3 {
+  font-size: 16px;
+}
+
+.ai-chat__richtext h4 {
+  font-size: 14px;
+}
+
+.ai-chat__richtext strong {
+  font-weight: 800;
+}
+
+.ai-chat__richtext em {
+  font-style: italic;
+}
+
+.ai-chat__richtext ul,
+.ai-chat__richtext ol {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.ai-chat__richtext li {
+  padding-left: 2px;
+}
+
+.ai-chat__richtext a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+.ai-chat__richtext code {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.92em;
+  background: rgba(25, 52, 36, 0.08);
+}
+
+.ai-chat__richtext pre {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  overflow: auto;
+  background: rgba(22, 42, 31, 0.9);
+  color: #eef8f0;
+}
+
+.ai-chat__richtext pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.ai-chat__richtext blockquote {
+  margin: 0;
+  padding: 8px 0 8px 14px;
+  border-left: 3px solid rgba(58, 138, 81, 0.32);
+  color: rgba(36, 76, 53, 0.86);
+}
+
+.ai-chat__richtext hr {
+  width: 100%;
+  height: 1px;
+  border: 0;
+  background: rgba(58, 138, 81, 0.18);
+}
+
+.ai-chat__callout {
+  display: grid;
+  gap: 6px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(58, 138, 81, 0.18);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.ai-chat__callout strong {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ai-chat__callout--warning {
+  border-color: rgba(197, 140, 28, 0.28);
+  background: rgba(255, 243, 214, 0.84);
+}
+
+.ai-chat__callout--warning strong {
+  color: #8f5c00;
+}
+
+.ai-chat__callout--tip {
+  border-color: rgba(37, 132, 95, 0.22);
+  background: rgba(226, 247, 237, 0.86);
+}
+
+.ai-chat__callout--tip strong {
+  color: #1e6b4d;
+}
+
+.ai-chat__callout--note {
+  border-color: rgba(88, 120, 164, 0.2);
+  background: rgba(236, 244, 255, 0.86);
+}
+
+.ai-chat__callout--note strong {
+  color: #31588d;
+}
+
 .ai-chat__bubble--assistant {
   justify-self: start;
   background: rgba(122, 183, 77, 0.14);
@@ -1069,6 +1218,55 @@ html[data-theme="dark"] .ai-chat__panel {
 html[data-theme="dark"] .ai-chat__bubble--assistant {
   background: rgba(122, 183, 77, 0.18);
   color: #d6eadc;
+}
+
+html[data-theme="dark"] .ai-chat__richtext code {
+  background: rgba(230, 245, 234, 0.12);
+}
+
+html[data-theme="dark"] .ai-chat__richtext pre {
+  background: rgba(7, 14, 10, 0.92);
+  color: #e7f6ea;
+}
+
+html[data-theme="dark"] .ai-chat__richtext blockquote {
+  border-left-color: rgba(122, 183, 77, 0.34);
+  color: rgba(214, 234, 220, 0.88);
+}
+
+html[data-theme="dark"] .ai-chat__richtext hr {
+  background: rgba(122, 183, 77, 0.22);
+}
+
+html[data-theme="dark"] .ai-chat__callout {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .ai-chat__callout--warning {
+  background: rgba(96, 67, 14, 0.34);
+  border-color: rgba(214, 175, 74, 0.26);
+}
+
+html[data-theme="dark"] .ai-chat__callout--warning strong {
+  color: #f4d888;
+}
+
+html[data-theme="dark"] .ai-chat__callout--tip {
+  background: rgba(22, 74, 55, 0.34);
+  border-color: rgba(67, 179, 132, 0.24);
+}
+
+html[data-theme="dark"] .ai-chat__callout--tip strong {
+  color: #8fe0bc;
+}
+
+html[data-theme="dark"] .ai-chat__callout--note {
+  background: rgba(28, 52, 84, 0.34);
+  border-color: rgba(110, 150, 218, 0.24);
+}
+
+html[data-theme="dark"] .ai-chat__callout--note strong {
+  color: #a5c8ff;
 }
 
 .ai-chat__composer {

@@ -4,6 +4,7 @@
   if (root.dataset.aiChatMode !== "page") return;
 
   const aiChatUrl = String(window.TOGA_CONFIG?.aiChatUrl || "").trim();
+  const apiUrl = String(window.TOGA_CONFIG?.apiUrl || "").trim();
   const STORAGE_KEY = `toga:ai-chat:${window.location.pathname}:history:v2`;
   const MAX_HISTORY = 12;
   const mountTarget = document.getElementById("aiChatMount");
@@ -45,6 +46,19 @@
     } catch (_) {
       return null;
     }
+  }
+
+  function buildRequestContext() {
+    return getPageContext() || {};
+  }
+
+  function buildDataSource() {
+    return apiUrl
+      ? {
+          url: apiUrl,
+          mode: "list",
+        }
+      : null;
   }
 
   function getAssistantIntro(context) {
@@ -150,11 +164,342 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function isSafeHref(value) {
+    try {
+      const url = new URL(String(value || "").trim(), window.location.href);
+      return ["http:", "https:", "mailto:", "tel:"].includes(url.protocol);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function renderInlineMarkdown(value) {
+    const placeholders = [];
+    let html = escapeHtml(value);
+
+    html = html.replace(/`([^`\n]+)`/g, (_, code) => {
+      const token = `__MD_TOKEN_${placeholders.length}__`;
+      placeholders.push(`<code>${escapeHtml(code)}</code>`);
+      return token;
+    });
+
+    html = html.replace(
+      /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+|tel:[^\s)]+)\)/g,
+      (_, label, href) => {
+        if (!isSafeHref(href)) return escapeHtml(label);
+
+        const token = `__MD_TOKEN_${placeholders.length}__`;
+        placeholders.push(
+          `<a href="${escapeHtml(
+            href
+          )}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+            label
+          )}</a>`
+        );
+        return token;
+      }
+    );
+
+    html = html.replace(
+      /\b(https?:\/\/[^\s<]+[^\s<.,;:!?])/g,
+      (href) => {
+        if (!isSafeHref(href)) return href;
+
+        const token = `__MD_TOKEN_${placeholders.length}__`;
+        placeholders.push(
+          `<a href="${escapeHtml(
+            href
+          )}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+            href
+          )}</a>`
+        );
+        return token;
+      }
+    );
+
+    html = html.replace(/\*\*([^*\n][\s\S]*?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/(^|[^\w])\*([^*\n][\s\S]*?)\*(?!\w)/g, "$1<em>$2</em>");
+
+    placeholders.forEach((replacement, index) => {
+      html = html.replace(`__MD_TOKEN_${index}__`, replacement);
+    });
+
+    return html;
+  }
+
+  function buildParagraphBlock(lines) {
+    const joined = lines.join("\n").trim();
+    if (!joined) return "";
+
+    const calloutMatch = joined.match(
+      /^(Perhatian|Penting|Catatan|Catatan Dasar|Tips|Tip|Info)\s*:\s*([\s\S]+)$/i
+    );
+
+    if (calloutMatch) {
+      const label = calloutMatch[1];
+      const body = calloutMatch[2]
+        .split("\n")
+        .map((line) => renderInlineMarkdown(line))
+        .join("<br>");
+      const tone =
+        /perhatian|penting/i.test(label)
+          ? "warning"
+          : /tips|tip/i.test(label)
+          ? "tip"
+          : "note";
+
+      return `<aside class="ai-chat__callout ai-chat__callout--${tone}"><strong>${escapeHtml(
+        label
+      )}:</strong><p>${body}</p></aside>`;
+    }
+
+    return `<p>${joined
+      .split("\n")
+      .map((line) => renderInlineMarkdown(line))
+      .join("<br>")}</p>`;
+  }
+
+  function buildListBlock(lines, ordered) {
+    const tag = ordered ? "ol" : "ul";
+    const pattern = ordered ? /^\d+\.\s+/ : /^[-*]\s+/;
+    const items = lines
+      .map((line) => line.replace(pattern, "").trim())
+      .filter(Boolean)
+      .map((line) => `<li>${renderInlineMarkdown(line)}</li>`)
+      .join("");
+
+    return items ? `<${tag}>${items}</${tag}>` : "";
+  }
+
+  function buildBlockquoteBlock(lines) {
+    const content = lines
+      .map((line) => line.replace(/^>\s?/, ""))
+      .join("\n")
+      .trim();
+
+    return content ? `<blockquote>${buildParagraphBlock([content])}</blockquote>` : "";
+  }
+
+  function buildCodeBlock(lines) {
+    const content = escapeHtml(lines.join("\n"));
+    return `<pre><code>${content}</code></pre>`;
+  }
+
+  function markdownToHtml(value) {
+    const normalized = String(value || "").replace(/\r\n?/g, "\n").trim();
+    if (!normalized) return "<p></p>";
+
+    const lines = normalized.split("\n");
+    const blocks = [];
+    let index = 0;
+
+    while (index < lines.length) {
+      const line = lines[index];
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        index += 1;
+        continue;
+      }
+
+      if (/^```/.test(trimmed)) {
+        const codeLines = [];
+        index += 1;
+
+        while (index < lines.length && !/^```/.test(lines[index].trim())) {
+          codeLines.push(lines[index]);
+          index += 1;
+        }
+
+        if (index < lines.length) index += 1;
+        blocks.push(buildCodeBlock(codeLines));
+        continue;
+      }
+
+      const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+      if (headingMatch) {
+        const level = Math.min(headingMatch[1].length, 4);
+        blocks.push(
+          `<h${level}>${renderInlineMarkdown(headingMatch[2].trim())}</h${level}>`
+        );
+        index += 1;
+        continue;
+      }
+
+      if (/^[-*]\s+/.test(trimmed)) {
+        const listLines = [];
+
+        while (index < lines.length && /^[-*]\s+/.test(lines[index].trim())) {
+          listLines.push(lines[index].trim());
+          index += 1;
+        }
+
+        blocks.push(buildListBlock(listLines, false));
+        continue;
+      }
+
+      if (/^\d+\.\s+/.test(trimmed)) {
+        const listLines = [];
+
+        while (index < lines.length && /^\d+\.\s+/.test(lines[index].trim())) {
+          listLines.push(lines[index].trim());
+          index += 1;
+        }
+
+        blocks.push(buildListBlock(listLines, true));
+        continue;
+      }
+
+      if (/^>\s?/.test(trimmed)) {
+        const quoteLines = [];
+
+        while (index < lines.length && /^>\s?/.test(lines[index].trim())) {
+          quoteLines.push(lines[index].trim());
+          index += 1;
+        }
+
+        blocks.push(buildBlockquoteBlock(quoteLines));
+        continue;
+      }
+
+      if (/^---+$/.test(trimmed)) {
+        blocks.push("<hr>");
+        index += 1;
+        continue;
+      }
+
+      const paragraphLines = [];
+
+      while (index < lines.length) {
+        const current = lines[index];
+        const currentTrimmed = current.trim();
+
+        if (
+          !currentTrimmed ||
+          /^```/.test(currentTrimmed) ||
+          /^(#{1,4})\s+/.test(currentTrimmed) ||
+          /^[-*]\s+/.test(currentTrimmed) ||
+          /^\d+\.\s+/.test(currentTrimmed) ||
+          /^>\s?/.test(currentTrimmed) ||
+          /^---+$/.test(currentTrimmed)
+        ) {
+          break;
+        }
+
+        paragraphLines.push(currentTrimmed);
+        index += 1;
+      }
+
+      blocks.push(buildParagraphBlock(paragraphLines));
+    }
+
+    return blocks.join("");
+  }
+
+  function sanitizeRichHtml(html) {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+
+    const allowedTags = new Set([
+      "A",
+      "ASIDE",
+      "BLOCKQUOTE",
+      "BR",
+      "CODE",
+      "EM",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "HR",
+      "LI",
+      "OL",
+      "P",
+      "PRE",
+      "STRONG",
+      "UL",
+    ]);
+    const allowedAttrs = {
+      A: new Set(["href", "target", "rel"]),
+      ASIDE: new Set(["class"]),
+    };
+
+    function sanitizeNode(node) {
+      Array.from(node.childNodes).forEach((child) => {
+        if (child.nodeType === Node.ELEMENT_NODE) {
+          const tagName = child.tagName.toUpperCase();
+
+          if (!allowedTags.has(tagName)) {
+            const fragment = document.createDocumentFragment();
+            while (child.firstChild) {
+              fragment.appendChild(child.firstChild);
+            }
+            child.replaceWith(fragment);
+            sanitizeNode(node);
+            return;
+          }
+
+          Array.from(child.attributes).forEach((attr) => {
+            const allowed = allowedAttrs[tagName];
+            if (!allowed || !allowed.has(attr.name)) {
+              child.removeAttribute(attr.name);
+            }
+          });
+
+          if (tagName === "A") {
+            const href = child.getAttribute("href") || "";
+            if (!isSafeHref(href)) {
+              child.replaceWith(document.createTextNode(child.textContent || ""));
+              return;
+            }
+
+            child.setAttribute("target", "_blank");
+            child.setAttribute("rel", "noopener noreferrer");
+          }
+
+          sanitizeNode(child);
+          return;
+        }
+
+        if (child.nodeType !== Node.TEXT_NODE) {
+          child.remove();
+        }
+      });
+    }
+
+    sanitizeNode(template.content);
+    return template.innerHTML;
+  }
+
+  function renderAssistantBody(content) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "ai-chat__richtext";
+    wrapper.innerHTML = sanitizeRichHtml(markdownToHtml(content));
+    return wrapper;
+  }
+
   function appendMessage(role, content) {
     const item = document.createElement("article");
     item.className = `ai-chat__bubble ai-chat__bubble--${role}`;
-    const body = document.createElement("p");
-    body.textContent = content;
+
+    const body =
+      role === "assistant"
+        ? renderAssistantBody(content)
+        : document.createElement("p");
+
+    if (role !== "assistant") {
+      body.textContent = content;
+    }
+
     item.appendChild(body);
     messagesEl.appendChild(item);
     scrollToBottom();
@@ -340,14 +685,17 @@
         body: JSON.stringify({
           message,
           history,
-          context: getPageContext(),
+          context: buildRequestContext(),
+          dataSource: buildDataSource(),
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Gagal menghubungi backend AI.");
+        throw new Error(
+          data?.detail || data?.error || "Gagal menghubungi backend AI."
+        );
       }
 
       const reply = String(data?.reply || "").trim() || "Tidak ada respons.";
