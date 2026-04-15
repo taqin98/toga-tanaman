@@ -1042,6 +1042,8 @@ html[data-theme="dark"] .ai-chat__panel {
 }
 
 .ai-chat__bubble {
+  display: grid;
+  gap: 8px;
   max-width: 92%;
   border-radius: 18px;
   padding: 10px 12px;
@@ -1052,6 +1054,11 @@ html[data-theme="dark"] .ai-chat__panel {
 .ai-chat__bubble p {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.ai-chat__bubble-meta {
+  font-size: 11px;
+  color: rgba(36, 76, 53, 0.7);
 }
 
 .ai-chat__richtext {
@@ -1161,6 +1168,44 @@ html[data-theme="dark"] .ai-chat__panel {
   background: rgba(58, 138, 81, 0.18);
 }
 
+.ai-chat__table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(58, 138, 81, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.ai-chat__table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-chat__table th,
+.ai-chat__table td {
+  padding: 10px 12px;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(58, 138, 81, 0.14);
+}
+
+.ai-chat__table thead th {
+  position: sticky;
+  top: 0;
+  background: rgba(225, 243, 222, 0.96);
+  font-weight: 800;
+}
+
+.ai-chat__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ai-chat__table tbody tr:nth-child(even) {
+  background: rgba(86, 160, 97, 0.05);
+}
+
 .ai-chat__callout {
   display: grid;
   gap: 6px;
@@ -1203,6 +1248,10 @@ html[data-theme="dark"] .ai-chat__panel {
   color: #31588d;
 }
 
+.ai-chat__bubble--pending {
+  min-width: min(320px, 100%);
+}
+
 .ai-chat__bubble--assistant {
   justify-self: start;
   background: rgba(122, 183, 77, 0.14);
@@ -1215,9 +1264,54 @@ html[data-theme="dark"] .ai-chat__panel {
   color: #f7fff8;
 }
 
+.ai-chat__thinking {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-chat__thinking-label {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.ai-chat__thinking-shimmer {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-chat__thinking-shimmer span {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  background-size: 220% 100%;
+  animation: aiChatShimmer 1.2s linear infinite;
+}
+
+.ai-chat__thinking-shimmer span:nth-child(1) {
+  width: 92%;
+}
+
+.ai-chat__thinking-shimmer span:nth-child(2) {
+  width: 100%;
+}
+
+.ai-chat__thinking-shimmer span:nth-child(3) {
+  width: 68%;
+}
+
 html[data-theme="dark"] .ai-chat__bubble--assistant {
   background: rgba(122, 183, 77, 0.18);
   color: #d6eadc;
+}
+
+html[data-theme="dark"] .ai-chat__bubble-meta {
+  color: rgba(214, 234, 220, 0.72);
 }
 
 html[data-theme="dark"] .ai-chat__richtext code {
@@ -1236,6 +1330,24 @@ html[data-theme="dark"] .ai-chat__richtext blockquote {
 
 html[data-theme="dark"] .ai-chat__richtext hr {
   background: rgba(122, 183, 77, 0.22);
+}
+
+html[data-theme="dark"] .ai-chat__table-wrap {
+  border-color: rgba(122, 183, 77, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .ai-chat__table th,
+html[data-theme="dark"] .ai-chat__table td {
+  border-bottom-color: rgba(122, 183, 77, 0.14);
+}
+
+html[data-theme="dark"] .ai-chat__table thead th {
+  background: rgba(30, 53, 38, 0.94);
+}
+
+html[data-theme="dark"] .ai-chat__table tbody tr:nth-child(even) {
+  background: rgba(122, 183, 77, 0.06);
 }
 
 html[data-theme="dark"] .ai-chat__callout {
@@ -1267,6 +1379,16 @@ html[data-theme="dark"] .ai-chat__callout--note {
 
 html[data-theme="dark"] .ai-chat__callout--note strong {
   color: #a5c8ff;
+}
+
+html[data-theme="dark"] .ai-chat__thinking-shimmer span {
+  background: linear-gradient(
+    90deg,
+    rgba(190, 225, 201, 0.08) 0%,
+    rgba(190, 225, 201, 0.34) 50%,
+    rgba(190, 225, 201, 0.08) 100%
+  );
+  background-size: 220% 100%;
 }
 
 .ai-chat__composer {
@@ -1318,6 +1440,12 @@ html[data-theme="dark"] .ai-chat__input {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.74);
   color: var(--muted);
+}
+
+.ai-chat__send:disabled,
+.ai-chat__ghost:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 html[data-theme="dark"] .ai-chat__send {
@@ -1455,6 +1583,15 @@ html[data-theme="dark"] .ai-chat__panel--page .ai-chat__composer {
 
   .ai-chat__panel--page .ai-chat__composer {
     padding-bottom: calc(116px + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes aiChatShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -20% 0;
   }
 }
 

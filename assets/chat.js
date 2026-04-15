@@ -5,7 +5,7 @@
 
   const aiChatUrl = String(window.TOGA_CONFIG?.aiChatUrl || "").trim();
   const apiUrl = String(window.TOGA_CONFIG?.apiUrl || "").trim();
-  const STORAGE_KEY = `toga:ai-chat:${window.location.pathname}:history:v2`;
+  const STORAGE_KEY = `toga:ai-chat:${window.location.pathname}:history:v3`;
   const MAX_HISTORY = 12;
   const mountTarget = document.getElementById("aiChatMount");
 
@@ -22,7 +22,14 @@
           typeof item === "object" &&
           (item.role === "user" || item.role === "assistant") &&
           typeof item.content === "string"
-      );
+      ).map((item) => ({
+        role: item.role,
+        content: item.content,
+        durationMs:
+          Number.isFinite(item.durationMs) && item.durationMs >= 0
+            ? Math.round(item.durationMs)
+            : null,
+      }));
     } catch (_) {
       return [];
     }
@@ -125,6 +132,7 @@
   const state = {
     loading: false,
     history: readHistory(),
+    pendingMessageEl: null,
   };
 
   const host = document.createElement("div");
@@ -162,6 +170,30 @@
 
   function scrollToBottom() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function formatDuration(durationMs) {
+    const totalMs = Math.max(0, Number(durationMs) || 0);
+
+    if (totalMs < 1000) {
+      return "< 1 detik";
+    }
+
+    if (totalMs < 10000) {
+      const seconds = (totalMs / 1000).toFixed(1);
+      return `${seconds.replace(/\.0$/, "")} detik`;
+    }
+
+    if (totalMs < 60000) {
+      return `${Math.round(totalMs / 1000)} detik`;
+    }
+
+    const totalSeconds = Math.round(totalMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (!seconds) return `${minutes} menit`;
+    return `${minutes} menit ${seconds} detik`;
   }
 
   function escapeHtml(value) {
@@ -294,6 +326,94 @@
     return `<pre><code>${content}</code></pre>`;
   }
 
+  function isMarkdownTableDivider(line) {
+    return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(
+      String(line || "").trim()
+    );
+  }
+
+  function isMarkdownTableRow(line) {
+    const trimmed = String(line || "").trim();
+    if (!trimmed || !trimmed.includes("|")) return false;
+    return /^\|?.+\|.+\|?$/.test(trimmed);
+  }
+
+  function parseMarkdownTableRow(line) {
+    const trimmed = String(line || "").trim().replace(/^\|/, "").replace(/\|$/, "");
+    const cells = [];
+    let current = "";
+
+    for (let index = 0; index < trimmed.length; index += 1) {
+      const char = trimmed[index];
+      const next = trimmed[index + 1];
+
+      if (char === "\\" && next === "|") {
+        current += "|";
+        index += 1;
+        continue;
+      }
+
+      if (char === "|") {
+        cells.push(current.trim());
+        current = "";
+        continue;
+      }
+
+      current += char;
+    }
+
+    cells.push(current.trim());
+    return cells;
+  }
+
+  function getTableAlignments(line) {
+    return parseMarkdownTableRow(line).map((cell) => {
+      const trimmed = cell.trim();
+      const startsWithColon = trimmed.startsWith(":");
+      const endsWithColon = trimmed.endsWith(":");
+
+      if (startsWithColon && endsWithColon) return "center";
+      if (endsWithColon) return "right";
+      return "left";
+    });
+  }
+
+  function buildTableBlock(headerLine, dividerLine, bodyLines) {
+    const headers = parseMarkdownTableRow(headerLine);
+    const alignments = getTableAlignments(dividerLine);
+    const columnCount = headers.length;
+
+    if (!columnCount) return "";
+
+    const thead = headers
+      .map((cell, index) => {
+        const align = alignments[index] || "left";
+        return `<th scope="col" style="text-align:${align}">${renderInlineMarkdown(
+          cell
+        )}</th>`;
+      })
+      .join("");
+
+    const tbody = bodyLines
+      .map((line) => {
+        const cells = parseMarkdownTableRow(line);
+        const paddedCells = Array.from({ length: columnCount }, (_, index) => cells[index] || "");
+        const columns = paddedCells
+          .map((cell, index) => {
+            const align = alignments[index] || "left";
+            return `<td style="text-align:${align}">${renderInlineMarkdown(
+              cell
+            )}</td>`;
+          })
+          .join("");
+
+        return `<tr>${columns}</tr>`;
+      })
+      .join("");
+
+    return `<div class="ai-chat__table-wrap"><table class="ai-chat__table"><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
+  }
+
   function markdownToHtml(value) {
     const normalized = String(value || "").replace(/\r\n?/g, "\n").trim();
     if (!normalized) return "<p></p>";
@@ -322,6 +442,25 @@
 
         if (index < lines.length) index += 1;
         blocks.push(buildCodeBlock(codeLines));
+        continue;
+      }
+
+      if (
+        index + 1 < lines.length &&
+        isMarkdownTableRow(trimmed) &&
+        isMarkdownTableDivider(lines[index + 1])
+      ) {
+        const headerLine = trimmed;
+        const dividerLine = lines[index + 1].trim();
+        const bodyLines = [];
+        index += 2;
+
+        while (index < lines.length && isMarkdownTableRow(lines[index])) {
+          bodyLines.push(lines[index].trim());
+          index += 1;
+        }
+
+        blocks.push(buildTableBlock(headerLine, dividerLine, bodyLines));
         continue;
       }
 
@@ -386,6 +525,9 @@
         if (
           !currentTrimmed ||
           /^```/.test(currentTrimmed) ||
+          (index + 1 < lines.length &&
+            isMarkdownTableRow(currentTrimmed) &&
+            isMarkdownTableDivider(lines[index + 1])) ||
           /^(#{1,4})\s+/.test(currentTrimmed) ||
           /^[-*]\s+/.test(currentTrimmed) ||
           /^\d+\.\s+/.test(currentTrimmed) ||
@@ -415,6 +557,7 @@
       "BLOCKQUOTE",
       "BR",
       "CODE",
+      "DIV",
       "EM",
       "H1",
       "H2",
@@ -426,11 +569,21 @@
       "P",
       "PRE",
       "STRONG",
+      "TABLE",
+      "TBODY",
+      "TD",
+      "TH",
+      "THEAD",
+      "TR",
       "UL",
     ]);
     const allowedAttrs = {
       A: new Set(["href", "target", "rel"]),
       ASIDE: new Set(["class"]),
+      DIV: new Set(["class"]),
+      TABLE: new Set(["class"]),
+      TD: new Set(["style"]),
+      TH: new Set(["scope", "style"]),
     };
 
     function sanitizeNode(node) {
@@ -487,33 +640,85 @@
     return wrapper;
   }
 
-  function appendMessage(role, content) {
+  function renderThinkingBody() {
+    const wrapper = document.createElement("div");
+    wrapper.className = "ai-chat__thinking";
+    wrapper.setAttribute("role", "status");
+    wrapper.setAttribute("aria-live", "polite");
+    wrapper.innerHTML = `
+      <div class="ai-chat__thinking-label">Sedang menyiapkan jawaban...</div>
+      <div class="ai-chat__thinking-shimmer" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    `;
+    return wrapper;
+  }
+
+  function buildMessageElement(role, content, options = {}) {
     const item = document.createElement("article");
     item.className = `ai-chat__bubble ai-chat__bubble--${role}`;
 
-    const body =
-      role === "assistant"
-        ? renderAssistantBody(content)
-        : document.createElement("p");
+    if (options.pending) {
+      item.classList.add("ai-chat__bubble--pending");
+    }
 
-    if (role !== "assistant") {
+    const body = options.pending
+      ? renderThinkingBody()
+      : role === "assistant"
+      ? renderAssistantBody(content)
+      : document.createElement("p");
+
+    if (!options.pending && role !== "assistant") {
       body.textContent = content;
     }
 
     item.appendChild(body);
+    if (
+      role === "assistant" &&
+      !options.pending &&
+      (Number.isFinite(options.durationMs) || options.metaText)
+    ) {
+      const meta = document.createElement("div");
+      meta.className = "ai-chat__bubble-meta";
+      meta.textContent = options.metaText || `Selesai dalam ${formatDuration(options.durationMs)}`;
+      item.appendChild(meta);
+    }
+
+    return item;
+  }
+
+  function appendMessage(role, content, options = {}) {
+    const item = buildMessageElement(role, content, options);
     messagesEl.appendChild(item);
     scrollToBottom();
+    return item;
+  }
+
+  function replaceMessage(element, role, content, options = {}) {
+    const item = buildMessageElement(role, content, options);
+    if (element && element.parentNode) {
+      element.replaceWith(item);
+    } else {
+      messagesEl.appendChild(item);
+    }
+    scrollToBottom();
+    return item;
   }
 
   function renderMessages() {
     messagesEl.innerHTML = "";
+    state.pendingMessageEl = null;
 
     if (state.history.length === 0) {
       appendMessage("assistant", getAssistantIntro(getPageContext()));
       return;
     }
 
-    state.history.forEach((item) => appendMessage(item.role, item.content));
+    state.history.forEach((item) =>
+      appendMessage(item.role, item.content, { durationMs: item.durationMs })
+    );
   }
 
   function bindSuggestionButtons() {
@@ -552,6 +757,7 @@
     state.loading = loading;
     sendBtn.disabled = loading;
     input.disabled = loading;
+    resetBtn.disabled = loading;
     sendBtn.textContent = loading ? "Memproses..." : "Kirim";
   }
 
@@ -667,13 +873,15 @@
   async function sendMessage(message) {
     if (!aiChatUrl) {
       const reply = buildLocalReply(message, getPageContext());
-      state.history.push({ role: "assistant", content: reply });
+      state.history.push({ role: "assistant", content: reply, durationMs: 0 });
       writeHistory(state.history);
-      appendMessage("assistant", reply);
+      appendMessage("assistant", reply, { durationMs: 0 });
       return;
     }
 
     setLoading(true);
+    const startedAt = performance.now();
+    state.pendingMessageEl = appendMessage("assistant", "", { pending: true });
 
     try {
       const history = state.history.slice(-MAX_HISTORY);
@@ -699,15 +907,22 @@
       }
 
       const reply = String(data?.reply || "").trim() || "Tidak ada respons.";
-      state.history.push({ role: "assistant", content: reply });
+      const durationMs = Math.max(0, Math.round(performance.now() - startedAt));
+      state.history.push({ role: "assistant", content: reply, durationMs });
       writeHistory(state.history);
-      appendMessage("assistant", reply);
+      state.pendingMessageEl = replaceMessage(state.pendingMessageEl, "assistant", reply, {
+        durationMs,
+      });
     } catch (error) {
-      appendMessage(
+      const durationMs = Math.max(0, Math.round(performance.now() - startedAt));
+      state.pendingMessageEl = replaceMessage(
+        state.pendingMessageEl,
         "assistant",
-        error?.message || "Tidak bisa terhubung ke backend AI."
+        error?.message || "Tidak bisa terhubung ke backend AI.",
+        { metaText: `Gagal setelah ${formatDuration(durationMs)}` }
       );
     } finally {
+      state.pendingMessageEl = null;
       setLoading(false);
     }
   }
