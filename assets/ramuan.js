@@ -98,9 +98,6 @@ function publishRamuanContext() {
     remedies: DUMMY_REMEDIES.map(summarizeRemedy),
     suggestedPrompts: [
       "Saya batuk ringan, tanaman TOGA apa yang cocok?",
-      "Bagaimana langkah membuat ramuan jahe untuk badan meriang?",
-      "Kalau mual ringan, ramuan TOGA apa yang bisa dicoba?",
-      "Tolong jelaskan peringatan dasar sebelum memakai ramuan TOGA.",
       "Buatkan langkah sederhana untuk sariawan ringan dengan daun sirih.",
       "Tanaman apa yang cocok untuk minuman pagi menjaga kebugaran?",
     ],
