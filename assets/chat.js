@@ -92,7 +92,7 @@
     if (context?.page === "ramuan") {
       return aiChatUrl
         ? "Tanyakan keluhan ringan, tanaman yang relevan, langkah pembuatan, dan perhatian dasar."
-        : "Mode lokal: memakai data ramuan pada halaman ini untuk memberi jawaban awal.";
+        : "Mode lokal: halaman ini belum memuat dataset ramuan, jadi jawaban dibatasi pada konteks umum.";
     }
 
     if (context?.page === "tanaman") {
@@ -761,68 +761,12 @@
     sendBtn.textContent = loading ? "Memproses..." : "Kirim";
   }
 
-  function normalizeText(value) {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function findMatchingRemedy(context, normalizedMessage) {
-    const remedies = Array.isArray(context?.remedies) ? context.remedies : [];
-    let best = null;
-    let bestScore = 0;
-
-    remedies.forEach((item) => {
-      const haystack = normalizeText(
-        [
-          item.judul,
-          item.kategori,
-          Array.isArray(item.tanaman) ? item.tanaman.join(" ") : "",
-          item.ringkas,
-          Array.isArray(item.langkah) ? item.langkah.join(" ") : "",
-          item.perhatian,
-        ].join(" ")
-      );
-
-      let score = 0;
-      normalizedMessage.split(" ").forEach((word) => {
-        if (word.length >= 3 && haystack.includes(word)) score += 1;
-      });
-
-      if (score > bestScore) {
-        best = item;
-        bestScore = score;
-      }
-    });
-
-    return bestScore > 0 ? best : remedies[0] || null;
-  }
-
   function buildLocalReply(message, context) {
-    const normalizedMessage = normalizeText(message);
-
     if (context?.page === "ramuan") {
-      const remedy = findMatchingRemedy(context, normalizedMessage);
-      if (!remedy) {
-        return "Data ramuan lokal belum tersedia. Isi `aiChatUrl` untuk memakai backend AI.";
-      }
-
-      const steps = Array.isArray(remedy.langkah)
-        ? remedy.langkah.slice(0, 3).join(" ")
-        : "Langkah belum tersedia.";
-      const plants = Array.isArray(remedy.tanaman)
-        ? remedy.tanaman.join(", ")
-        : "Tanaman belum tersedia.";
-
       return [
-        `Dari konteks halaman, contoh yang paling relevan adalah "${remedy.judul}".`,
-        `Tanaman yang dipakai: ${plants}.`,
-        remedy.ringkas || "",
-        `Langkah singkat: ${steps}`,
-        remedy.perhatian ? `Perhatian: ${remedy.perhatian}` : "",
-        "Ini masih panduan umum berbasis data dummy. Jika keluhan berat atau tidak membaik, periksa ke tenaga kesehatan.",
+        "Halaman ramuan ini belum memuat dataset ramuan lokal, jadi saya tidak akan memberi resep atau langkah spesifik dari data dummy.",
+        "Jika Anda ingin jawaban berbasis AI dan konteks situs, isi `aiChatUrl` agar chat memakai backend AI.",
+        "Jika keluhan berat, mendadak, berkepanjangan, atau tidak membaik, periksa ke tenaga kesehatan.",
       ]
         .filter(Boolean)
         .join("\n\n");
