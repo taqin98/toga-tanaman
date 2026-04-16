@@ -139,10 +139,10 @@
   host.className = "ai-chat ai-chat--page";
 
   host.innerHTML = `
-    <section class="ai-chat__panel ai-chat__panel--page" aria-label="Asisten Ai TOGA">
+    <section class="ai-chat__panel ai-chat__panel--page" aria-label="Asisten Ai">
       <div class="ai-chat__head">
         <div>
-          <strong class="ai-chat__title">Asisten Ai TOGA</strong>
+          <strong class="ai-chat__title">Asisten Ai</strong>
           <p class="ai-chat__subtitle">${getSubtitle(getPageContext())}</p>
         </div>
       </div>
