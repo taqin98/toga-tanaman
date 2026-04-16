@@ -1,141 +1,267 @@
 <!doctype html>
 <html lang="id">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="description" content="Kumpulan ramuan TOGA, tutorial sederhana, dan langkah penggunaan tanaman obat keluarga." />
-  <title>Ramuan TOGA RT 09</title>
-  <meta name="theme-color" content="#1f7a3e" />
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="TOGA" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="assets/icons/icon-192.png" type="image/png" />
-  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
-  <link rel="apple-touch-startup-image" href="assets/screenshots/install-mobile.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" /></noscript>
-  <script>
-    (function () {
-      var key = "toga:theme";
-      var theme = "";
-      try {
-        theme = localStorage.getItem(key) || "";
-      } catch (_) {}
-      if (theme !== "dark" && theme !== "light") {
-        theme = "light";
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Kumpulan ramuan TOGA, tutorial sederhana, dan langkah penggunaan tanaman obat keluarga."
+    />
+    <title>Ramuan TOGA RT 09</title>
+    <meta name="theme-color" content="#1f7a3e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="TOGA" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+    <link rel="apple-touch-startup-image" href="assets/screenshots/install-mobile.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
+      as="style"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
+    />
+    <noscript
+      ><link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
+    /></noscript>
+    <script>
+      (function () {
+        var key = "toga:theme";
+        var theme = "";
+        try {
+          theme = localStorage.getItem(key) || "";
+        } catch (_) {}
+        if (theme !== "dark" && theme !== "light") {
+          theme = "light";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute("content", theme === "dark" ? "#0f1a14" : "#dff0dd");
+        }
+      })();
+    </script>
+    <style>
+      html,
+      body {
+        background-color: #dff0dd;
       }
-      document.documentElement.setAttribute("data-theme", theme);
-      var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) {
-        meta.setAttribute("content", theme === "dark" ? "#0f1a14" : "#dff0dd");
+      html[data-theme="dark"],
+      html[data-theme="dark"] body {
+        background-color: #0f1a14;
       }
-    })();
-  </script>
-  <style>
-    html,
-    body {
-      background-color: #dff0dd;
-    }
-    html[data-theme="dark"],
-    html[data-theme="dark"] body {
-      background-color: #0f1a14;
-    }
-  </style>
-  <link rel="stylesheet" href="assets/style.css" />
-</head>
-<body data-ai-chat-mode="page">
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">
-        <img class="logo-mark" src="assets/icons/icon-192.png" alt="Logo TOGA" />
+    </style>
+    <link rel="stylesheet" href="assets/style.css" />
+    <style>
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.75);
+        background: rgba(235, 247, 233, 0.86);
+        backdrop-filter: blur(18px);
+        transition: background 0.26s ease, border-color 0.26s ease;
+      }
+      html[data-theme="dark"] .topbar {
+        border-bottom-color: rgba(166, 209, 181, 0.16);
+        background: rgba(12, 22, 16, 0.78);
+      }
+      .top-wrap {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .back-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        text-decoration: none;
+      }
+      html[data-theme="dark"] .back-btn {
+        border-color: rgba(166, 209, 181, 0.3);
+        background: rgba(20, 34, 26, 0.92);
+        color: #d9efdf;
+      }
+      .title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .subtitle {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body data-ai-chat-mode="page">
+    <header class="topbar">
+      <div class="top-wrap">
+        <a class="back-btn" href="index.html" aria-label="Kembali ke Home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path
+              d="m15 6-6 6 6 6"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </a>
+        <div>
+          <h1 class="title">Ramuan</h1>
+          <p class="subtitle">Asisten Ai Toga • RT 09 PKK</p>
+        </div>
       </div>
-      <div>
-        <div class="title">TOGA RT 09</div>
-        <div class="subtitle">Ramuan Ai • RT 09 PKK</div>
+    </header>
+
+    <main class="container ramuan-chat-shell">
+      <div id="aiChatMount"></div>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Menu utama">
+      <ul class="bottom-nav-list">
+        <li class="bottom-nav-item">
+          <a class="bottom-nav-link" href="index.html">
+            <span class="bottom-nav-icon-wrap" aria-hidden="true">
+              <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.8a1 1 0 0 1-1-1v-3.5a1.2 1.2 0 0 0-2.4 0V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8.5Z"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <span class="bottom-nav-label">Home</span>
+          </a>
+        </li>
+        <li class="bottom-nav-item">
+          <a class="bottom-nav-link" href="gallery.html">
+            <span class="bottom-nav-icon-wrap" aria-hidden="true">
+              <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                />
+                <path
+                  d="m7 15 2.4-2.8a1 1 0 0 1 1.5-.03L13 14.7l1.9-2a1 1 0 0 1 1.5.02L18 15"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <circle cx="9" cy="8.5" r="1.2" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="bottom-nav-label">Galeri</span>
+          </a>
+        </li>
+        <li class="bottom-nav-item">
+          <a class="bottom-nav-link" href="ar.html">
+            <span class="bottom-nav-icon-wrap" aria-hidden="true">
+              <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 3.5 4.8 7.2v9.6L12 20.5l7.2-3.7V7.2L12 3.5Z"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M12 20.5V12M19.2 7.2 12 12 4.8 7.2"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <span class="bottom-nav-label">AR</span>
+          </a>
+        </li>
+        <li class="bottom-nav-item">
+          <a class="bottom-nav-link is-active" href="ramuan.html" aria-current="page">
+            <span class="bottom-nav-icon-wrap" aria-hidden="true">
+              <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M7 4.5h10M9 4.5v3m6-3v3M7 9.5h10l-1.1 8.1a2 2 0 0 1-2 1.7h-3.8a2 2 0 0 1-2-1.7L7 9.5Z"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M10 13c.8.7 1.5 1 2 1s1.2-.3 2-1"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
+            <span class="bottom-nav-label">Ramuan</span>
+          </a>
+        </li>
+        <li class="bottom-nav-item">
+          <a class="bottom-nav-link" href="profile.html">
+            <span class="bottom-nav-icon-wrap" aria-hidden="true">
+              <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6" />
+                <path
+                  d="M5.5 19a6.5 6.5 0 0 1 13 0"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
+            <span class="bottom-nav-label">Profile</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <aside id="installBanner" class="install-banner hidden" aria-live="polite">
+      <p class="install-text">
+        Pasang aplikasi TOGA di layar utama untuk akses lebih cepat.
+      </p>
+      <div class="install-actions">
+        <button id="installBtn" class="btn" type="button">Tambah ke Home Screen</button>
+        <button
+          id="dismissInstallBtn"
+          class="btn btn-ghost"
+          type="button"
+          aria-label="Tutup banner instalasi"
+        >
+          Nanti
+        </button>
       </div>
-    </div>
-  </header>
+    </aside>
 
-  <main class="container ramuan-chat-shell">
-    <div id="aiChatMount"></div>
-  </main>
-
-  <nav class="bottom-nav" aria-label="Menu utama">
-    <ul class="bottom-nav-list">
-      <li class="bottom-nav-item">
-        <a class="bottom-nav-link" href="index.html">
-          <span class="bottom-nav-icon-wrap" aria-hidden="true">
-            <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.8a1 1 0 0 1-1-1v-3.5a1.2 1.2 0 0 0-2.4 0V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="bottom-nav-label">Home</span>
-        </a>
-      </li>
-      <li class="bottom-nav-item">
-        <a class="bottom-nav-link" href="gallery.html">
-          <span class="bottom-nav-icon-wrap" aria-hidden="true">
-            <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="1.6"/>
-              <path d="m7 15 2.4-2.8a1 1 0 0 1 1.5-.03L13 14.7l1.9-2a1 1 0 0 1 1.5.02L18 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="9" cy="8.5" r="1.2" fill="currentColor"/>
-            </svg>
-          </span>
-          <span class="bottom-nav-label">Galeri</span>
-        </a>
-      </li>
-      <li class="bottom-nav-item">
-        <a class="bottom-nav-link" href="ar.html">
-          <span class="bottom-nav-icon-wrap" aria-hidden="true">
-            <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3.5 4.8 7.2v9.6L12 20.5l7.2-3.7V7.2L12 3.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-              <path d="M12 20.5V12M19.2 7.2 12 12 4.8 7.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="bottom-nav-label">AR</span>
-        </a>
-      </li>
-      <li class="bottom-nav-item">
-        <a class="bottom-nav-link is-active" href="ramuan.html" aria-current="page">
-          <span class="bottom-nav-icon-wrap" aria-hidden="true">
-            <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M7 4.5h10M9 4.5v3m6-3v3M7 9.5h10l-1.1 8.1a2 2 0 0 1-2 1.7h-3.8a2 2 0 0 1-2-1.7L7 9.5Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M10 13c.8.7 1.5 1 2 1s1.2-.3 2-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="bottom-nav-label">Ramuan</span>
-        </a>
-      </li>
-      <li class="bottom-nav-item">
-        <a class="bottom-nav-link" href="profile.html">
-          <span class="bottom-nav-icon-wrap" aria-hidden="true">
-            <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="bottom-nav-label">Profile</span>
-        </a>
-      </li>
-    </ul>
-  </nav>
-
-  <aside id="installBanner" class="install-banner hidden" aria-live="polite">
-    <p class="install-text">Pasang aplikasi TOGA di layar utama untuk akses lebih cepat.</p>
-    <div class="install-actions">
-      <button id="installBtn" class="btn" type="button">Tambah ke Home Screen</button>
-      <button id="dismissInstallBtn" class="btn btn-ghost" type="button" aria-label="Tutup banner instalasi">Nanti</button>
-    </div>
-  </aside>
-
-  <script src="assets/config.js" defer></script>
-  <script src="assets/theme.js" defer></script>
-  <script src="assets/chat.js" defer></script>
-  <script src="assets/pwa.js" defer></script>
-  <script src="assets/ramuan.js" defer></script>
-</body>
+    <script src="assets/config.js" defer></script>
+    <script src="assets/theme.js" defer></script>
+    <script src="assets/chat.js" defer></script>
+    <script src="assets/pwa.js" defer></script>
+    <script src="assets/ramuan.js" defer></script>
+  </body>
 </html>
