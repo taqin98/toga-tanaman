@@ -363,11 +363,35 @@ function buildDriveThumbProxyUrl(fileId, preferredWidth) {
   return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
 }
 
+function inferImageProxyUrlFromConfig() {
+  const direct = String(window.TOGA_CONFIG?.imageProxyUrl || "").trim();
+  if (direct) return direct;
+
+  const aiChatUrl = String(window.TOGA_CONFIG?.aiChatUrl || "").trim();
+  if (!aiChatUrl) return "";
+
+  try {
+    const url = new URL(aiChatUrl, window.location.href);
+    url.pathname = url.pathname.replace(/\/api\/chat\/?$/i, "/api/image-proxy");
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+function buildImageProxyUrl(src) {
+  const proxyUrl = inferImageProxyUrlFromConfig();
+  if (!proxyUrl) return src;
+  return `${proxyUrl}?url=${encodeURIComponent(src)}`;
+}
+
 function optimizeDriveThumbnail(src, preferredWidth) {
   const clean = resolveImg(src);
   const fileId = extractGoogleDriveFileId(clean);
   if (!fileId) return clean;
-  return buildDriveThumbProxyUrl(fileId, preferredWidth);
+  return buildImageProxyUrl(buildDriveThumbProxyUrl(fileId, preferredWidth));
 }
 
 function applyImageSources(img, src, { sizes, defaultWidth }) {

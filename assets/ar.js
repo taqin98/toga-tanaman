@@ -9,6 +9,7 @@ const LOCAL_DATA_URL = "data/plants.json";
 const FETCH_TIMEOUT_MS = 12000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_KEY_AR_LIST = "toga:ar:plants:full:v1";
+const SEARCH_PARAMS = new URLSearchParams(window.location.search);
 
 const PLACEHOLDER_SVG_DATA =
   "data:image/svg+xml;utf8," +
@@ -21,8 +22,8 @@ const PLACEHOLDER_SVG_DATA =
 
 const LOST_DEBOUNCE_MS = 350;
 const FOUND_EVENT_THROTTLE_MS = 220;
-const DEBUG_MODE =
-  new URLSearchParams(window.location.search).get("debug") === "1";
+const DEBUG_MODE = SEARCH_PARAMS.get("debug") === "1";
+const PREVIEW_TARGET = (SEARCH_PARAMS.get("preview") || "").trim();
 
 const hud = document.getElementById("hud");
 const btnBack = document.getElementById("btnBack");
@@ -168,10 +169,36 @@ function buildDriveThumbProxyUrl(fileId, preferredWidth) {
   return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
 }
 
-function normalizeGoogleDriveUrl(url) {
+function inferImageProxyUrlFromConfig() {
+  const direct = safeStr(window.TOGA_CONFIG?.imageProxyUrl).trim();
+  if (direct) return direct;
+
+  const aiChatUrl = safeStr(window.TOGA_CONFIG?.aiChatUrl).trim();
+  if (!aiChatUrl) return "";
+
+  try {
+    const url = new URL(aiChatUrl, window.location.href);
+    url.pathname = url.pathname.replace(/\/api\/chat\/?$/i, "/api/image-proxy");
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+function buildLocalImageProxyUrl(url) {
+  const proxyUrl = inferImageProxyUrlFromConfig();
+  if (!proxyUrl) return url;
+  return `${proxyUrl}?url=${encodeURIComponent(url)}`;
+}
+
+function normalizeRemoteImageUrl(url) {
   const fileId = extractGoogleDriveFileId(url);
-  if (!fileId) return url;
-  return buildDriveThumbProxyUrl(fileId, 400);
+  if (fileId) {
+    return buildLocalImageProxyUrl(buildDriveThumbProxyUrl(fileId, 400));
+  }
+  return buildLocalImageProxyUrl(url);
 }
 
 function resolveImageSrc(gambar) {
@@ -179,7 +206,7 @@ function resolveImageSrc(gambar) {
   if (!src) return PLACEHOLDER_SVG_DATA;
 
   // jika absolute http(s), pakai langsung
-  if (isHttpUrl(src)) return normalizeGoogleDriveUrl(src);
+  if (isHttpUrl(src)) return normalizeRemoteImageUrl(src);
 
   // jika data URL (base64 / svg)
   if (/^data:/i.test(src)) return src;
@@ -277,6 +304,34 @@ function setMarkerLost(id) {
     logDebug("markerLost", { id });
   }, LOST_DEBOUNCE_MS);
   lostTimers.set(id, timer);
+}
+
+function withMarkerObject(id, callback) {
+  const markerEl = document.getElementById(`m_${id}`);
+  if (!markerEl) return false;
+
+  const apply = () => {
+    if (!markerEl.object3D) return;
+    callback(markerEl);
+  };
+
+  if (markerEl.hasLoaded) {
+    apply();
+  } else {
+    markerEl.addEventListener("loaded", apply, { once: true });
+  }
+
+  return true;
+}
+
+function forceMarkerVisible(id) {
+  return withMarkerObject(id, (markerEl) => {
+    markerEl.setAttribute("visible", "true");
+    markerEl.object3D.visible = true;
+    markerEl.object3D.traverse((obj) => {
+      obj.visible = true;
+    });
+  });
 }
 
 function ensureImageAsset(id, gambar) {
@@ -453,6 +508,42 @@ function setupDebugMode(plants) {
   };
 }
 
+function resolvePreviewPlant(plants) {
+  if (!PREVIEW_TARGET) return null;
+
+  const normalizedTarget = PREVIEW_TARGET.toLowerCase();
+  if (normalizedTarget === "1" || normalizedTarget === "first") {
+    return plants.find((p) => safeStr(p.id).trim()) || null;
+  }
+
+  return (
+    plants.find(
+      (p) => safeStr(p.id).trim().toLowerCase() === normalizedTarget
+    ) || null
+  );
+}
+
+function applyPreviewMode(plants) {
+  const previewPlant = resolvePreviewPlant(plants);
+  if (!PREVIEW_TARGET) return;
+
+  if (!previewPlant) {
+    setHudText(`AR TOGA • Preview id "${PREVIEW_TARGET}" tidak ditemukan.`);
+    logDebug("previewMissing", { preview: PREVIEW_TARGET });
+    return;
+  }
+
+  const id = safeStr(previewPlant.id).trim();
+  const nama = safeStr(previewPlant.nama || id);
+  const detailUrl = `./?id=${encodeURIComponent(id)}`;
+
+  if (debugSelect) debugSelect.value = id;
+  setMarkerFound(id, nama, detailUrl);
+  forceMarkerVisible(id);
+  setHudText(`Preview marker: ${nama}`);
+  logDebug("previewActive", { id, nama });
+}
+
 async function loadPlants() {
   const cached = readCache(CACHE_KEY_AR_LIST);
   const cachedPlants = Array.isArray(cached)
@@ -522,6 +613,7 @@ async function main() {
     setupDebugMode(plants);
     setScanState("scanning");
     setHudText("AR TOGA • Siap. Arahkan kamera ke marker pattern.");
+    applyPreviewMode(plants);
   } catch (e) {
     console.error(e);
     setScanState("error");

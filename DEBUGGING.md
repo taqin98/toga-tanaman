@@ -38,10 +38,23 @@ Langkah cek AR:
 3. Pastikan `id` marker sama dengan `id` data tanaman.
 4. Cek Console untuk error gambar (CORS/path) dan marker loading.
 
+Catatan thumbnail Google Drive di `ar.html`:
+- Texture A-Frame / WebGL bisa gagal walau URL gambar masih bisa dibuka biasa di tab browser.
+- Penyebabnya biasanya header CORS dari `drive.google.com` tidak cocok untuk texture AR.
+- Project ini memakai endpoint JS `vercel-ai-backend/api/image-proxy.js` untuk proxy thumbnail Google Drive dan sumber remote lain yang perlu texture A-Frame, misalnya Wikimedia.
+
 Mode debug (`?debug=1`) menyediakan:
 - Simulasi event marker `Found`, `Lost`, `Reset`
 - Export log event debug (JSON)
 - Clear log
+
+Preview marker tanpa scan dari URL:
+- Marker tertentu: `ar.html?debug=1&preview=kunyit`
+- Marker pertama dari dataset: `ar.html?debug=1&preview=first`
+- Mode ini akan:
+  - memilih marker target
+  - memicu state seperti marker terdeteksi
+  - memaksa objek A-Frame marker tampil untuk tuning posisi/style
 
 Force tampil object 3D marker dari Console (untuk adjust posisi/style):
 - Berdasarkan pilihan dropdown debug:
@@ -54,6 +67,12 @@ document.querySelector('#m_kunyit').object3D.visible = true
 ```
 
 Gunakan cara ini untuk menampilkan objek AR tanpa menunggu scan marker, lalu lakukan penyesuaian atribut/posisi di elemen A-Frame dan terapkan hasilnya ke kode sumber.
+
+Membuka A-Frame Inspector:
+- Fokus dulu ke halaman AR
+- Tekan `Ctrl + Alt + I`
+- Di macOS biasanya pakai `Control + Option + I` (bukan `Command + Option + I`, karena itu shortcut DevTools browser)
+- Inspector cocok untuk geser, rotate, scale, dan inspeksi entity 3D secara visual
 
 Jika marker tidak terbaca:
 - Tingkatkan pencahayaan
