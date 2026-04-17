@@ -183,7 +183,17 @@
 
     <script src="assets/vendor/pdfMake/pdfmake.min.js"></script>
     <script src="assets/vendor/pdfMake/vfs_fonts.js"></script>
+    <script src="assets/config.js"></script>
     <script>
+      const DEFAULT_API_URL =
+        "https://script.google.com/macros/s/AKfycbzNJ5nbk41yTxowEorHZendyeW-TvgzfdnnpyTMHGEayTW1KE7zQuk0GHe6fjAQmkukUg/exec";
+      const API_URL =
+        typeof window.TOGA_CONFIG?.apiUrl === "string" &&
+        window.TOGA_CONFIG.apiUrl.trim()
+          ? window.TOGA_CONFIG.apiUrl.trim()
+          : DEFAULT_API_URL;
+      const LOCAL_DATA_URL = "data/plants.json";
+
       const fileInput = document.getElementById("fileInput");
       const btnLoadExisting = document.getElementById("btnLoadExisting");
       const btnDownload = document.getElementById("btnDownload");
@@ -241,6 +251,55 @@
           reader.onerror = () => reject(reader.error);
           reader.readAsDataURL(blob);
         });
+      }
+
+      async function fetchJson(url) {
+        const res = await fetch(url, {
+          cache: "no-cache",
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) throw new Error(`Request gagal (${res.status})`);
+        return res.json();
+      }
+
+      function normalizeEntries(payload) {
+        const entries = Array.isArray(payload)
+          ? payload
+          : Object.values(payload || {});
+
+        return entries
+          .map((item) => {
+            const id = String(item?.id || "").trim();
+            if (!id) return null;
+            const safeId = safeBase(id);
+            return {
+              id,
+              safeId,
+              path: `markers/qr/${safeId}-marker.png`,
+            };
+          })
+          .filter(Boolean);
+      }
+
+      async function loadMarkerEntries() {
+        try {
+          const report = await fetchJson("markers/qr/report.json");
+          const entries = normalizeEntries(report);
+          return { entries, source: "report" };
+        } catch (error) {
+          if (!/404/.test(String(error.message || ""))) throw error;
+        }
+
+        try {
+          const list = await fetchJson(
+            `${API_URL}${API_URL.includes("?") ? "&" : "?"}mode=list`
+          );
+          const entries = normalizeEntries(list);
+          return { entries, source: "api" };
+        } catch (_) {}
+
+        const local = await fetchJson(LOCAL_DATA_URL);
+        return { entries: normalizeEntries(local), source: "local" };
       }
 
       function buildCell(item) {
@@ -374,29 +433,21 @@
         setStatus("");
         btnDownload.disabled = true;
         try {
-          setStatus("Memuat daftar marker dari report.json...");
-          const res = await fetch("markers/qr/report.json", {
-            cache: "no-cache",
-          });
-          if (!res.ok) throw new Error("report.json tidak ditemukan");
-          const list = await res.json();
-          const entries = Array.isArray(list) ? list : Object.values(list || {});
-          const markerItems = entries
-            .map((item) => {
-              const id = String(item.id || "").trim();
-              if (!id) return null;
-              const safeId = safeBase(id);
-              const path = `markers/qr/${safeId}-marker.png`;
-              return { id, safeId, path };
-            })
-            .filter(Boolean);
+          setStatus("Memuat daftar marker...");
+          const { entries: markerItems, source } = await loadMarkerEntries();
 
           if (!markerItems.length) {
-            setStatus("Tidak ada data marker di report.json.");
+            setStatus("Tidak ada data marker yang bisa dipakai.");
             return;
           }
 
-          setStatus(`Mengambil ${markerItems.length} marker...`);
+          const sourceLabel =
+            source === "report"
+              ? "report.json"
+              : source === "api"
+              ? "API tanaman"
+              : "data lokal";
+          setStatus(`Mengambil ${markerItems.length} marker dari ${sourceLabel}...`);
           const results = await Promise.all(
             markerItems.map(async (m) => {
               try {
@@ -424,7 +475,7 @@
           }
           await renderPdfPreview(items);
           if (failed.length === 0) {
-            setStatus("Preview siap dari marker folder.");
+            setStatus(`Preview siap dari ${sourceLabel}.`);
           }
         } catch (err) {
           console.error(err);
