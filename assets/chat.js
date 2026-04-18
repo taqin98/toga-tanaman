@@ -60,17 +60,7 @@
   }
 
   function buildDataSource() {
-    if (!apiUrl || window.TOGA_CONFIG?.aiChatUseRemoteDataSource !== true) {
-      return null;
-    }
-
-    const context = getPageContext();
-    const hasUsefulLocalContext =
-      Boolean(context?.currentItem) ||
-      (Array.isArray(context?.visibleItems) && context.visibleItems.length > 0) ||
-      (Array.isArray(context?.remedies) && context.remedies.length > 0);
-
-    if (hasUsefulLocalContext) {
+    if (!apiUrl || window.TOGA_CONFIG?.aiChatUseRemoteDataSource === false) {
       return null;
     }
 
