@@ -1,0 +1,230 @@
+[
+  {
+    "id": "kunyit",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kunyit",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkunyit",
+    "qr_file": "markers/qr/kunyit.png"
+  },
+  {
+    "id": "jahe",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=jahe",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Djahe",
+    "qr_file": "markers/qr/jahe.png"
+  },
+  {
+    "id": "kencur",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kencur",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkencur",
+    "qr_file": "markers/qr/kencur.png"
+  },
+  {
+    "id": "serai",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=serai",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dserai",
+    "qr_file": "markers/qr/serai.png"
+  },
+  {
+    "id": "temulawak",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=temulawak",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dtemulawak",
+    "qr_file": "markers/qr/temulawak.png"
+  },
+  {
+    "id": "kumiskucing",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kumiskucing",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkumiskucing",
+    "qr_file": "markers/qr/kumiskucing.png"
+  },
+  {
+    "id": "lidahbuaya",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=lidahbuaya",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dlidahbuaya",
+    "qr_file": "markers/qr/lidahbuaya.png"
+  },
+  {
+    "id": "pandan",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=pandan",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dpandan",
+    "qr_file": "markers/qr/pandan.png"
+  },
+  {
+    "id": "bungatelang",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=bungatelang",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dbungatelang",
+    "qr_file": "markers/qr/bungatelang.png"
+  },
+  {
+    "id": "temukunci",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=temukunci",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dtemukunci",
+    "qr_file": "markers/qr/temukunci.png"
+  },
+  {
+    "id": "binahong",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=binahong",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dbinahong",
+    "qr_file": "markers/qr/binahong.png"
+  },
+  {
+    "id": "lavender",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=lavender",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dlavender",
+    "qr_file": "markers/qr/lavender.png"
+  },
+  {
+    "id": "daunmint",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=daunmint",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Ddaunmint",
+    "qr_file": "markers/qr/daunmint.png"
+  },
+  {
+    "id": "terong",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=terong",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dterong",
+    "qr_file": "markers/qr/terong.png"
+  },
+  {
+    "id": "kemangi",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kemangi",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkemangi",
+    "qr_file": "markers/qr/kemangi.png"
+  },
+  {
+    "id": "cabai",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=cabai",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dcabai",
+    "qr_file": "markers/qr/cabai.png"
+  },
+  {
+    "id": "sawipakcoy(sawisendok)",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=sawipakcoy(sawisendok)",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dsawipakcoy(sawisendok)",
+    "qr_file": "markers/qr/sawipakcoy(sawisendok).png"
+  },
+  {
+    "id": "kelor",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kelor",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkelor",
+    "qr_file": "markers/qr/kelor.png"
+  },
+  {
+    "id": "daunsuji",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=daunsuji",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Ddaunsuji",
+    "qr_file": "markers/qr/daunsuji.png"
+  },
+  {
+    "id": "dadapserep",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=dadapserep",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Ddadapserep",
+    "qr_file": "markers/qr/dadapserep.png"
+  },
+  {
+    "id": "yodium",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=yodium",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dyodium",
+    "qr_file": "markers/qr/yodium.png"
+  },
+  {
+    "id": "daunungu",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=daunungu",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Ddaunungu",
+    "qr_file": "markers/qr/daunungu.png"
+  },
+  {
+    "id": "pepaya",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=pepaya",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dpepaya",
+    "qr_file": "markers/qr/pepaya.png"
+  },
+  {
+    "id": "temuireng",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=temuireng",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dtemuireng",
+    "qr_file": "markers/qr/temuireng.png"
+  },
+  {
+    "id": "patchouli",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=patchouli",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dpatchouli",
+    "qr_file": "markers/qr/patchouli.png"
+  },
+  {
+    "id": "selasih",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=selasih",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dselasih",
+    "qr_file": "markers/qr/selasih.png"
+  },
+  {
+    "id": "alangalang",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=alangalang",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dalangalang",
+    "qr_file": "markers/qr/alangalang.png"
+  },
+  {
+    "id": "meniran",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=meniran",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dmeniran",
+    "qr_file": "markers/qr/meniran.png"
+  },
+  {
+    "id": "sirihcina",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=sirihcina",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dsirihcina",
+    "qr_file": "markers/qr/sirihcina.png"
+  },
+  {
+    "id": "sirihmerah",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=sirihmerah",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dsirihmerah",
+    "qr_file": "markers/qr/sirihmerah.png"
+  },
+  {
+    "id": "pare",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=pare",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dpare",
+    "qr_file": "markers/qr/pare.png"
+  },
+  {
+    "id": "pegagan",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=pegagan",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dpegagan",
+    "qr_file": "markers/qr/pegagan.png"
+  },
+  {
+    "id": "mimba",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=mimba",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dmimba",
+    "qr_file": "markers/qr/mimba.png"
+  },
+  {
+    "id": "kitolot",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kitolot",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkitolot",
+    "qr_file": "markers/qr/kitolot.png"
+  },
+  {
+    "id": "murberi",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=murberi",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dmurberi",
+    "qr_file": "markers/qr/murberi.png"
+  },
+  {
+    "id": "cocorbebek",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=cocorbebek",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dcocorbebek",
+    "qr_file": "markers/qr/cocorbebek.png"
+  },
+  {
+    "id": "tapakliman",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=tapakliman",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dtapakliman",
+    "qr_file": "markers/qr/tapakliman.png"
+  },
+  {
+    "id": "kapulaga",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kapulaga",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkapulaga",
+    "qr_file": "markers/qr/kapulaga.png"
+  }
+]
