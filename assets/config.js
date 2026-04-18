@@ -7,6 +7,9 @@ window.TOGA_CONFIG = Object.assign(
     // Opsional: endpoint backend AI di Vercel.
     // Contoh: "https://nama-app-vercel.vercel.app/api/chat"
     aiChatUrl: "https://vercel-ai-backend-ten.vercel.app/api/chat",
+    // Nonaktif secara default agar chat tidak selalu menunggu fetch dataset remote
+    // sebelum ke model. Aktifkan hanya jika memang perlu grounding langsung dari API.
+    aiChatUseRemoteDataSource: false,
     // Opsional: endpoint proxy gambar untuk thumbnail Google Drive di AR.
     // Jika kosong, frontend akan menurunkan URL dari aiChatUrl -> /api/image-proxy
     imageProxyUrl: "https://vercel-ai-backend-ten.vercel.app/api/image-proxy",

@@ -60,12 +60,24 @@
   }
 
   function buildDataSource() {
-    return apiUrl
-      ? {
-          url: apiUrl,
-          mode: "list",
-        }
-      : null;
+    if (!apiUrl || window.TOGA_CONFIG?.aiChatUseRemoteDataSource !== true) {
+      return null;
+    }
+
+    const context = getPageContext();
+    const hasUsefulLocalContext =
+      Boolean(context?.currentItem) ||
+      (Array.isArray(context?.visibleItems) && context.visibleItems.length > 0) ||
+      (Array.isArray(context?.remedies) && context.remedies.length > 0);
+
+    if (hasUsefulLocalContext) {
+      return null;
+    }
+
+    return {
+      url: apiUrl,
+      mode: "list",
+    };
   }
 
   function getAssistantIntro(context) {
@@ -814,6 +826,30 @@
     return "Mode lokal aktif. Isi `aiChatUrl` di assets/config.js agar chat memakai backend AI.";
   }
 
+  function getFriendlyBackendErrorMessage(error) {
+    const status = Number(error?.status) || 0;
+    const detail = String(error?.message || "").trim();
+
+    if (
+      status === 503 ||
+      /provider returned error|provider ai sementara tidak tersedia|sementara tidak tersedia|service unavailable/i.test(
+        detail
+      )
+    ) {
+      return "Layanan AI sedang sibuk atau sementara tidak tersedia. Coba lagi beberapa saat lagi.";
+    }
+
+    if (status === 504 || /timeout|timed out|kehabisan waktu/i.test(detail)) {
+      return "Permintaan ke layanan AI terlalu lama. Coba ulang beberapa saat lagi.";
+    }
+
+    if (status === 429 || /rate limit|too many requests/i.test(detail)) {
+      return "Permintaan ke layanan AI sedang dibatasi. Tunggu sebentar lalu coba lagi.";
+    }
+
+    return detail || "Tidak bisa terhubung ke backend AI.";
+  }
+
   async function sendMessage(message) {
     if (!aiChatUrl) {
       const reply = buildLocalReply(message, getPageContext());
@@ -845,9 +881,11 @@
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
+        const error = new Error(
           data?.detail || data?.error || "Gagal menghubungi backend AI."
         );
+        error.status = Number(data?.status) || response.status;
+        throw error;
       }
 
       const reply = String(data?.reply || "").trim() || "Tidak ada respons.";
@@ -862,7 +900,7 @@
       state.pendingMessageEl = replaceMessage(
         state.pendingMessageEl,
         "assistant",
-        error?.message || "Tidak bisa terhubung ke backend AI.",
+        getFriendlyBackendErrorMessage(error),
         { metaText: `Gagal setelah ${formatDuration(durationMs)}` }
       );
     } finally {
