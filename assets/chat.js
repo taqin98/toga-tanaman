@@ -7,6 +7,7 @@
   const apiUrl = String(window.TOGA_CONFIG?.apiUrl || "").trim();
   const STORAGE_KEY = `toga:ai-chat:${window.location.pathname}:history:v3`;
   const MAX_HISTORY = 12;
+  const MAX_UI_CONTINUATION_ROUNDS = 4;
   const mountTarget = document.getElementById("aiChatMount");
 
   if (!mountTarget) return;
@@ -174,6 +175,21 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
+  function scrollResponseIntoView(behavior = "smooth") {
+    const target =
+      state.pendingMessageEl || messagesEl.lastElementChild || messagesEl;
+
+    if (!target || typeof target.scrollIntoView !== "function") return;
+
+    requestAnimationFrame(() => {
+      target.scrollIntoView({
+        behavior,
+        block: "end",
+        inline: "nearest",
+      });
+    });
+  }
+
   function formatDuration(durationMs) {
     const totalMs = Math.max(0, Number(durationMs) || 0);
 
@@ -196,6 +212,33 @@
 
     if (!seconds) return `${minutes} menit`;
     return `${minutes} menit ${seconds} detik`;
+  }
+
+  function shouldContinueReply(reply, finishReason) {
+    const text = String(reply || "").trim();
+    if (!text) return false;
+
+    if (/^(length|max_tokens)$/i.test(String(finishReason || "").trim())) {
+      return true;
+    }
+
+    if (/[.!?)]$/.test(text)) {
+      return false;
+    }
+
+    const words = text.split(/\s+/).filter(Boolean);
+    return words.length >= 6 && text.length >= 32;
+  }
+
+  function mergeReplyParts(initialReply, continuationReply) {
+    const first = String(initialReply || "").trim();
+    const second = String(continuationReply || "").trim();
+
+    if (!first) return second;
+    if (!second) return first;
+    if (first.endsWith("-")) return `${first}${second}`;
+    if (/[\s(]$/.test(first) || /^[,.;:!?)]/.test(second)) return `${first}${second}`;
+    return `${first} ${second}`;
   }
 
   function escapeHtml(value) {
@@ -728,6 +771,7 @@
     buttons.forEach((button) => {
       button.addEventListener("click", () => {
         submitMessage(button.textContent || "");
+        scrollResponseIntoView();
       });
     });
   }
@@ -840,6 +884,36 @@
     return detail || "Tidak bisa terhubung ke backend AI.";
   }
 
+  async function requestAiReply(message, history) {
+    const response = await fetch(aiChatUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message,
+        history,
+        context: buildRequestContext(),
+        dataSource: buildDataSource(),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(
+        data?.detail || data?.error || "Gagal menghubungi backend AI."
+      );
+      error.status = Number(data?.status) || response.status;
+      throw error;
+    }
+
+    return {
+      reply: String(data?.reply || "").trim() || "Tidak ada respons.",
+      finishReason: String(data?.finishReason || "").trim(),
+    };
+  }
+
   async function sendMessage(message) {
     if (!aiChatUrl) {
       const reply = buildLocalReply(message, getPageContext());
@@ -854,31 +928,41 @@
     state.pendingMessageEl = appendMessage("assistant", "", { pending: true });
 
     try {
-      const history = state.history.slice(-MAX_HISTORY);
-      const response = await fetch(aiChatUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message,
-          history,
-          context: buildRequestContext(),
-          dataSource: buildDataSource(),
-        }),
-      });
+      const historyBeforeUser = state.history.slice(0, -1).slice(-MAX_HISTORY);
+      const initialResult = await requestAiReply(message, historyBeforeUser);
+      let reply = initialResult.reply;
+      let finishReason = initialResult.finishReason;
 
-      const data = await response.json();
+      for (
+        let round = 1;
+        round <= MAX_UI_CONTINUATION_ROUNDS &&
+        shouldContinueReply(reply, finishReason);
+        round += 1
+      ) {
+        const continuationHistory = [
+          ...historyBeforeUser,
+          { role: "user", content: message },
+          { role: "assistant", content: reply },
+        ].slice(-MAX_HISTORY);
 
-      if (!response.ok) {
-        const error = new Error(
-          data?.detail || data?.error || "Gagal menghubungi backend AI."
-        );
-        error.status = Number(data?.status) || response.status;
-        throw error;
+        try {
+          const continuationResult = await requestAiReply(
+            "Lanjutkan jawaban sebelumnya dari kata terakhir tanpa mengulang dari awal. Akhiri dengan kalimat lengkap.",
+            continuationHistory
+          );
+
+          if (!continuationResult.reply) {
+            break;
+          }
+
+          reply = mergeReplyParts(reply, continuationResult.reply);
+          finishReason = continuationResult.finishReason;
+        } catch (continuationError) {
+          console.warn("UI continuation failed:", continuationError);
+          break;
+        }
       }
 
-      const reply = String(data?.reply || "").trim() || "Tidak ada respons.";
       const durationMs = Math.max(0, Math.round(performance.now() - startedAt));
       state.history.push({ role: "assistant", content: reply, durationMs });
       writeHistory(state.history);
