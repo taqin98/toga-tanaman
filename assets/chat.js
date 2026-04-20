@@ -179,15 +179,20 @@
 
   function scrollResponseIntoView(behavior = "smooth") {
     requestAnimationFrame(() => {
-      if (typeof messagesEl.scrollTo === "function") {
-        messagesEl.scrollTo({
-          top: messagesEl.scrollHeight,
+      const pageScroller =
+        document.scrollingElement || document.documentElement || document.body;
+
+      if (!pageScroller) return;
+
+      if (typeof window.scrollTo === "function") {
+        window.scrollTo({
+          top: pageScroller.scrollHeight,
           behavior,
         });
         return;
       }
 
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      pageScroller.scrollTop = pageScroller.scrollHeight;
     });
   }
 
