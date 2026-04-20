@@ -1,20 +1,5 @@
 [
   {
-    "id": "kangkung",
-    "nama": "Kangkung",
-    "nama_latin": "Ipomoea aquatica",
-    "jenis": "Sayur",
-    "gambar": "images/kangkung.jpg",
-    "manfaat": [
-      "Sumber serat dan vitamin A.",
-      "Mendukung kesehatan pencernaan."
-    ],
-    "deskripsi": "Kangkung adalah sayuran daun yang tumbuh di area lembap dan mudah dibudidayakan.",
-    "catatan": [
-      "Cuci bersih sebelum diolah."
-    ]
-  },
-  {
     "id": "kunyit",
     "nama": "Kunyit",
     "nama_latin": "Curcuma longa",
