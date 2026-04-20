@@ -52,10 +52,12 @@ let listThumbObserver = null;
 let pendingListThumbs = [];
 let activeListThumbLoads = 0;
 let filteredPlantsCache = [];
+let allPlantsCache = [];
 let visiblePlantsCount = LIST_PAGE_SIZE;
 let lastRenderedCount = 0;
 let isLoadingMore = false;
 let loadingStartedAt = 0;
+let hasBoundListInteractions = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -156,23 +158,26 @@ async function refreshPlantsCache() {
   try {
     const remote = await fetchRemoteJSON(`${API_URL}?mode=list`);
     const normalized = normalizePlantList(remote);
-    if (normalized.length > 0) writeCache(CACHE_KEYS.list, normalized);
+    if (normalized.length > 0) {
+      writeCache(CACHE_KEYS.list, normalized);
+      return normalized;
+    }
   } catch (_) {}
+
+  return [];
 }
 
 async function loadPlants() {
   const cached = normalizePlantList(readCache(CACHE_KEYS.list));
   if (cached.length > 0) {
-    refreshPlantsCache();
-    return { plants: cached, source: "cache" };
+    return { plants: cached, source: "cache", shouldRefresh: true };
   }
 
   // Prioritaskan data lokal agar konten cepat tampil, lalu refresh remote di belakang.
   try {
     const local = await fetchLocalPlants();
     if (local.length > 0) {
-      refreshPlantsCache();
-      return { plants: local, source: "local" };
+      return { plants: local, source: "local", shouldRefresh: true };
     }
   } catch (err) {
     console.warn("Data lokal gagal dibaca:", err);
@@ -183,13 +188,13 @@ async function loadPlants() {
     const normalized = normalizePlantList(remote);
     if (normalized.length > 0) {
       writeCache(CACHE_KEYS.list, normalized);
-      return { plants: normalized, source: "remote" };
+      return { plants: normalized, source: "remote", shouldRefresh: false };
     }
   } catch (err) {
     console.warn("Remote list gagal:", err);
   }
 
-  return { plants: [], source: "empty" };
+  return { plants: [], source: "empty", shouldRefresh: false };
 }
 
 async function refreshPlantDetailCache(id) {
@@ -733,6 +738,39 @@ function renderJenisFilters(options) {
   });
 }
 
+function arePlantListsEqual(left, right) {
+  return JSON.stringify(left || []) === JSON.stringify(right || []);
+}
+
+function syncPlantListUI(plants, { preserveVisibleCount = false } = {}) {
+  const nextPlants = Array.isArray(plants) ? plants : [];
+  const previousVisibleCount = visiblePlantsCount;
+  const jenisOptions = getJenisOptions(nextPlants);
+
+  allPlantsCache = nextPlants;
+
+  if (!jenisOptions.includes(LIST_STATE.jenis)) {
+    LIST_STATE.jenis = "all";
+  }
+
+  renderJenisFilters(jenisOptions);
+  updateViewToggle();
+
+  filteredPlantsCache = getFilteredPlants(nextPlants);
+
+  if (preserveVisibleCount) {
+    visiblePlantsCount = Math.max(
+      LIST_PAGE_SIZE,
+      Math.min(previousVisibleCount, filteredPlantsCache.length || LIST_PAGE_SIZE)
+    );
+  } else {
+    resetListPagination();
+  }
+
+  renderList(filteredPlantsCache, "reset");
+  updatePlantListContext(nextPlants);
+}
+
 function getFilteredPlants(plants) {
   return plants.filter((item) => {
     const byJenis =
@@ -809,49 +847,43 @@ function setupListInteractions(plants) {
   const viewGrid = $("viewGrid");
   const viewList = $("viewList");
   const loadMoreBtn = $("loadMoreBtn");
-  const jenisOptions = getJenisOptions(plants);
 
-  renderJenisFilters(jenisOptions);
-  updateViewToggle();
-  setupLoadMoreObserver();
+  if (!hasBoundListInteractions) {
+    setupLoadMoreObserver();
 
-  const applyFilter = () => {
-    filteredPlantsCache = getFilteredPlants(plants);
-    resetListPagination();
-    renderList(filteredPlantsCache, "reset");
-    updatePlantListContext(plants);
-  };
+    input.addEventListener("input", () => {
+      LIST_STATE.query = input.value;
+      syncPlantListUI(allPlantsCache);
+    });
 
-  input.addEventListener("input", () => {
-    LIST_STATE.query = input.value;
-    applyFilter();
-  });
+    jenisWrap.addEventListener("click", (event) => {
+      const btn = event.target.closest("button[data-jenis]");
+      if (!btn) return;
+      LIST_STATE.jenis = btn.dataset.jenis || "all";
+      syncPlantListUI(allPlantsCache);
+    });
 
-  jenisWrap.addEventListener("click", (event) => {
-    const btn = event.target.closest("button[data-jenis]");
-    if (!btn) return;
-    LIST_STATE.jenis = btn.dataset.jenis || "all";
-    renderJenisFilters(jenisOptions);
-    applyFilter();
-  });
+    viewGrid.addEventListener("click", () => {
+      LIST_STATE.view = "grid";
+      updateViewToggle();
+      renderList(filteredPlantsCache, "reset");
+    });
 
-  viewGrid.addEventListener("click", () => {
-    LIST_STATE.view = "grid";
-    updateViewToggle();
-    renderList(filteredPlantsCache, "reset");
-  });
+    viewList.addEventListener("click", () => {
+      LIST_STATE.view = "list";
+      updateViewToggle();
+      renderList(filteredPlantsCache, "reset");
+    });
 
-  viewList.addEventListener("click", () => {
-    LIST_STATE.view = "list";
-    updateViewToggle();
-    renderList(filteredPlantsCache, "reset");
-  });
+    loadMoreBtn.addEventListener("click", () => {
+      loadMoreItems();
+    });
 
-  loadMoreBtn.addEventListener("click", () => {
-    loadMoreItems();
-  });
+    hasBoundListInteractions = true;
+  }
 
-  applyFilter();
+  input.value = LIST_STATE.query;
+  syncPlantListUI(plants);
 }
 
 function sanitizeRichText(rawHtml) {
@@ -1017,6 +1049,20 @@ async function main() {
 
       setupListInteractions(plants);
       show("stateList");
+
+      if (listResult.shouldRefresh) {
+        refreshPlantsCache().then((freshPlants) => {
+          if (!Array.isArray(freshPlants) || freshPlants.length === 0) return;
+          if (arePlantListsEqual(freshPlants, allPlantsCache)) {
+            setDataSourceNotice("remote");
+            return;
+          }
+
+          syncPlantListUI(freshPlants, { preserveVisibleCount: true });
+          setDataSourceNotice("remote");
+        });
+      }
+
       return;
     }
 
