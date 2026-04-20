@@ -6,9 +6,9 @@ function publishRamuanContext() {
     intro:
       "Halaman ini dipakai untuk konsultasi ringan seputar ramuan, langkah pemakaian tanaman TOGA, dan perhatian dasar. Dataset ramuan lokal belum tersedia di halaman ini.",
     suggestedPrompts: [
+      "Ramuan TOGA apa yang bisa diminum?",
       "Saya batuk ringan, tanaman TOGA apa yang cocok?",
       "Apa perhatian dasar sebelum memakai ramuan TOGA?",
-      "Kapan keluhan sebaiknya diperiksa ke tenaga kesehatan?",
     ],
   };
 
