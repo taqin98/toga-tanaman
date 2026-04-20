@@ -136,6 +136,8 @@
     loading: false,
     history: readHistory(),
     pendingMessageEl: null,
+    thinkingStartedAt: 0,
+    thinkingTimerId: null,
   };
 
   const host = document.createElement("div");
@@ -176,17 +178,16 @@
   }
 
   function scrollResponseIntoView(behavior = "smooth") {
-    const target =
-      state.pendingMessageEl || messagesEl.lastElementChild || messagesEl;
-
-    if (!target || typeof target.scrollIntoView !== "function") return;
-
     requestAnimationFrame(() => {
-      target.scrollIntoView({
-        behavior,
-        block: "end",
-        inline: "nearest",
-      });
+      if (typeof messagesEl.scrollTo === "function") {
+        messagesEl.scrollTo({
+          top: messagesEl.scrollHeight,
+          behavior,
+        });
+        return;
+      }
+
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     });
   }
 
@@ -685,13 +686,54 @@
     return wrapper;
   }
 
+  function clearThinkingTimer() {
+    if (state.thinkingTimerId) {
+      window.clearInterval(state.thinkingTimerId);
+      state.thinkingTimerId = null;
+    }
+    state.thinkingStartedAt = 0;
+  }
+
+  function updateThinkingTimer(timerEl) {
+    if (!timerEl) return;
+
+    const elapsedSeconds = Math.max(
+      0,
+      Math.floor((performance.now() - state.thinkingStartedAt) / 1000)
+    );
+
+    timerEl.textContent = `(${elapsedSeconds}s)`;
+  }
+
+  function startThinkingTimer(messageEl) {
+    clearThinkingTimer();
+
+    const timerEl = messageEl?.querySelector(".ai-chat__thinking-time");
+    if (!timerEl) return;
+
+    state.thinkingStartedAt = performance.now();
+    updateThinkingTimer(timerEl);
+    state.thinkingTimerId = window.setInterval(
+      () => updateThinkingTimer(timerEl),
+      1000
+    );
+  }
+
   function renderThinkingBody() {
     const wrapper = document.createElement("div");
     wrapper.className = "ai-chat__thinking";
     wrapper.setAttribute("role", "status");
     wrapper.setAttribute("aria-live", "polite");
     wrapper.innerHTML = `
-      <div class="ai-chat__thinking-label">Sedang menyiapkan jawaban...</div>
+      <div class="ai-chat__thinking-label">
+        <span class="ai-chat__thinking-time">(0s)</span>
+        <span class="ai-chat__thinking-text">
+          Sedang menyiapkan jawaban
+          <span class="ai-chat__thinking-dots" aria-hidden="true">
+            <span>.</span><span>.</span><span>.</span>
+          </span>
+        </span>
+      </div>
       <div class="ai-chat__thinking-shimmer" aria-hidden="true">
         <span></span>
         <span></span>
@@ -737,11 +779,18 @@
   function appendMessage(role, content, options = {}) {
     const item = buildMessageElement(role, content, options);
     messagesEl.appendChild(item);
+
+    if (options.pending) {
+      startThinkingTimer(item);
+    }
+
     scrollToBottom();
     return item;
   }
 
   function replaceMessage(element, role, content, options = {}) {
+    clearThinkingTimer();
+
     const item = buildMessageElement(role, content, options);
     if (element && element.parentNode) {
       element.replaceWith(item);
@@ -753,6 +802,7 @@
   }
 
   function renderMessages() {
+    clearThinkingTimer();
     messagesEl.innerHTML = "";
     state.pendingMessageEl = null;
 

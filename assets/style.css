@@ -1270,8 +1270,49 @@ html[data-theme="dark"] .ai-chat__panel {
 }
 
 .ai-chat__thinking-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-weight: 800;
   letter-spacing: -0.01em;
+}
+
+.ai-chat__thinking-time {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  /* background: rgba(255, 255, 255, 0.14); */
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ai-chat__thinking-text {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.ai-chat__thinking-dots {
+  display: inline-flex;
+  min-width: 18px;
+}
+
+.ai-chat__thinking-dots span {
+  display: inline-block;
+  animation: aiChatThinkingDot 1s ease-in-out infinite;
+  opacity: 0.2;
+}
+
+.ai-chat__thinking-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.ai-chat__thinking-dots span:nth-child(3) {
+  animation-delay: 0.36s;
 }
 
 .ai-chat__thinking-shimmer {
@@ -1303,6 +1344,19 @@ html[data-theme="dark"] .ai-chat__panel {
 
 .ai-chat__thinking-shimmer span:nth-child(3) {
   width: 68%;
+}
+
+@keyframes aiChatThinkingDot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
 }
 
 html[data-theme="dark"] .ai-chat__bubble--assistant {
@@ -1389,6 +1443,10 @@ html[data-theme="dark"] .ai-chat__thinking-shimmer span {
     rgba(190, 225, 201, 0.08) 100%
   );
   background-size: 220% 100%;
+}
+
+html[data-theme="dark"] .ai-chat__thinking-time {
+  background: rgba(190, 225, 201, 0.12);
 }
 
 .ai-chat__composer {
@@ -1505,6 +1563,8 @@ html[data-theme="dark"] .ai-chat__ghost {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 html[data-theme="dark"] .ai-chat__suggestion {
