@@ -1022,8 +1022,22 @@ html[data-theme="dark"] .ai-chat__panel {
 }
 
 .ai-chat__title {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
+}
+
+.ai-chat__title-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 auto;
+  background: center / contain no-repeat url("icons/icons8-ai-stars-100.png");
+}
+
+html[data-theme="dark"] .ai-chat__title-icon {
+  background-image: url("icons/icons8-ai-stars-100-white.png");
 }
 
 .ai-chat__subtitle {
@@ -1282,7 +1296,7 @@ html[data-theme="dark"] .ai-chat__panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 8px;
+  /* padding: 3px 8px; */
   border-radius: 999px;
   /* background: rgba(255, 255, 255, 0.14); */
   color: inherit;
@@ -1294,6 +1308,22 @@ html[data-theme="dark"] .ai-chat__panel {
 .ai-chat__thinking-text {
   display: inline-flex;
   align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ai-chat__thinking-word {
+  display: inline-block;
+  animation: aiChatThinkingWord 1s ease-in-out infinite;
+  opacity: 0.45;
+}
+
+.ai-chat__thinking-word:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.ai-chat__thinking-word:nth-child(3) {
+  animation-delay: 0.36s;
 }
 
 .ai-chat__thinking-dots {
@@ -1356,6 +1386,17 @@ html[data-theme="dark"] .ai-chat__panel {
   40% {
     opacity: 1;
     transform: translateY(-1px);
+  }
+}
+
+@keyframes aiChatThinkingWord {
+  0%,
+  80%,
+  100% {
+    opacity: 0.45;
+  }
+  40% {
+    opacity: 1;
   }
 }
 
@@ -1446,7 +1487,7 @@ html[data-theme="dark"] .ai-chat__thinking-shimmer span {
 }
 
 html[data-theme="dark"] .ai-chat__thinking-time {
-  background: rgba(190, 225, 201, 0.12);
+  /* background: rgba(190, 225, 201, 0.12); */
 }
 
 .ai-chat__composer {
@@ -1563,8 +1604,6 @@ html[data-theme="dark"] .ai-chat__ghost {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 html[data-theme="dark"] .ai-chat__suggestion {

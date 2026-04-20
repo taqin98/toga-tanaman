@@ -147,7 +147,10 @@
     <section class="ai-chat__panel ai-chat__panel--page" aria-label="Asisten Ai">
       <div class="ai-chat__head">
         <div>
-          <strong class="ai-chat__title">Asisten Ai</strong>
+          <strong class="ai-chat__title">
+            <span class="ai-chat__title-icon" aria-hidden="true"></span>
+            <span>Asisten Ai</span>
+          </strong>
           <p class="ai-chat__subtitle">${getSubtitle(getPageContext())}</p>
         </div>
       </div>
@@ -733,7 +736,9 @@
       <div class="ai-chat__thinking-label">
         <span class="ai-chat__thinking-time">(0s)</span>
         <span class="ai-chat__thinking-text">
-          Sedang menyiapkan jawaban
+          <span class="ai-chat__thinking-word">Sedang</span>
+          <span class="ai-chat__thinking-word">menyiapkan</span>
+          <span class="ai-chat__thinking-word">jawaban</span>
           <span class="ai-chat__thinking-dots" aria-hidden="true">
             <span>.</span><span>.</span><span>.</span>
           </span>
