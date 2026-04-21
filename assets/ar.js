@@ -60,12 +60,9 @@ if (btnDebugToggle && !DEBUG_MODE) {
 updateActiveUI();
 
 function getViewportSize() {
-  const viewport = window.visualViewport;
   return {
-    width: Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 0),
-    height: Math.round(
-      viewport?.height || window.innerHeight || document.documentElement.clientHeight || 0
-    ),
+    width: Math.round(window.innerWidth || document.documentElement.clientWidth || 0),
+    height: Math.round(window.innerHeight || document.documentElement.clientHeight || 0),
   };
 }
 
@@ -122,6 +119,29 @@ function applyArCameraViewport() {
     element.style.maxWidth = "none";
     element.style.maxHeight = "none";
   });
+}
+
+function lockPageScale() {
+  const viewport = window.visualViewport;
+  if (!viewport || viewport.scale === 1) return;
+
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  meta.setAttribute(
+    "content",
+    "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  );
+}
+
+function bindGestureLock() {
+  const preventMultiTouchZoom = (event) => {
+    if (event.touches && event.touches.length > 1) {
+      event.preventDefault();
+    }
+  };
+
+  document.addEventListener("touchmove", preventMultiTouchZoom, { passive: false });
+  document.addEventListener("touchstart", preventMultiTouchZoom, { passive: false });
 }
 
 function bindAndroidCameraViewportFix() {
@@ -725,7 +745,16 @@ async function main() {
 }
 
 bindAndroidCameraViewportFix();
+bindGestureLock();
 window.addEventListener("resize", applyArCameraViewport);
+window.visualViewport?.addEventListener("resize", () => {
+  lockPageScale();
+  applyArCameraViewport();
+});
+window.visualViewport?.addEventListener("scroll", () => {
+  lockPageScale();
+  applyArCameraViewport();
+});
 window.addEventListener("orientationchange", () => {
   window.setTimeout(applyArCameraViewport, 180);
 });

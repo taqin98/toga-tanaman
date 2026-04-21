@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="description" content="Sistem Informasi Tanaman Obat Keluarga (TOGA) berbasis QR Code untuk RT 09 PKK. Temukan informasi lengkap tentang tanaman obat keluarga, manfaat, dan cara penggunaannya dengan mudah melalui pemindaian QR Code." />
     <title>AR TOGA</title>
@@ -166,6 +166,20 @@
         overflow: hidden;
         font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
         transition: background 0.26s ease;
+        touch-action: none;
+        overscroll-behavior: none;
+        -webkit-text-size-adjust: 100%;
+      }
+      html {
+        overflow: hidden;
+        touch-action: none;
+        overscroll-behavior: none;
+      }
+      a-scene,
+      .a-canvas,
+      #arjs-video,
+      .ar-overlay {
+        touch-action: none;
       }
       .ar-overlay {
         position: fixed;
