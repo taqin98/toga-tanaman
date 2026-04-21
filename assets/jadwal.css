@@ -464,6 +464,21 @@ html[data-theme="dark"] .sync-status {
   color: #d6eadc;
 }
 
+.auth-gate-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(251, 140, 0, 0.12);
+  color: #a05a00;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+html[data-theme="dark"] .auth-gate-note {
+  background: rgba(251, 140, 0, 0.16);
+  color: #ffd08a;
+}
+
 .agenda-list {
   display: grid;
   gap: 10px;
@@ -609,6 +624,10 @@ html[data-theme="dark"] .mini-btn {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.label-chip:not(button) {
+  cursor: default;
 }
 
 html[data-theme="dark"] .label-chip {

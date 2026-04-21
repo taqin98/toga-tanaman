@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Masuk ke akun TOGA untuk mengelola jadwal, label warna, dan aksi CRUD kalender."
+    />
+    <title>Akun TOGA</title>
+    <meta name="theme-color" content="#1f7a3e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="TOGA" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap"
+      />
+    </noscript>
+    <script>
+      (function () {
+        var key = "toga:theme";
+        var theme = "";
+        try {
+          theme = localStorage.getItem(key) || "";
+        } catch (_) {}
+        if (theme !== "dark" && theme !== "light") {
+          theme =
+            window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute("content", theme === "dark" ? "#0f1a14" : "#dff0dd");
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="stylesheet" href="assets/account.css" />
+  </head>
+  <body>
+    <main class="account-shell" data-auth-page>
+      <section class="card account-card">
+        <div class="account-copy" data-auth-copy>
+          <h2 class="account-title" data-auth-title>Masuk</h2>
+          <p class="account-desc" data-auth-desc>
+            Login untuk mengelola jadwal, label warna, dan perubahan agenda.
+          </p>
+        </div>
+
+        <div class="auth-status" data-auth-status aria-live="polite" hidden></div>
+        <div class="auth-error" data-auth-error hidden></div>
+
+        <div data-auth-guest>
+          <form class="auth-form" data-auth-login-form>
+            <div class="auth-field">
+              <label for="authUsername">Username</label>
+              <input id="authUsername" name="username" type="text" autocomplete="username" required />
+            </div>
+            <div class="auth-field">
+              <label for="authPassword">Password</label>
+              <input
+                id="authPassword"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </div>
+            <button class="auth-submit" type="submit">Login</button>
+          </form>
+
+          <div class="auth-divider">atau</div>
+
+          <div class="auth-google" data-auth-google-wrap>
+            <div class="auth-google__button" data-auth-google-button></div>
+            <p class="auth-google__hint" data-auth-google-hint></p>
+          </div>
+        </div>
+
+        <div class="account-user" data-auth-user hidden>
+          <div class="account-user__head">
+            <div class="account-avatar" data-auth-avatar>?</div>
+            <div>
+              <h4 class="account-user__name" data-auth-name>-</h4>
+              <p class="account-user__meta" data-auth-meta>-</p>
+            </div>
+          </div>
+
+          <div class="account-user__actions">
+            <a class="account-link" href="jadwal.html">Jadwal</a>
+            <button class="auth-secondary" type="button" data-auth-logout>Logout</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="assets/config.js" defer></script>
+    <script src="assets/theme.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/pwa.js" defer></script>
+  </body>
+</html>

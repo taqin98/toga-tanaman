@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v13.2.0";
+const SW_VERSION = "toga-v13.3.0";
 
 const CACHE_NAMES = {
   appShell: `${SW_VERSION}-app-shell`,
@@ -16,10 +16,13 @@ const APP_SHELL_ASSETS = [
   "./profile.html",
   "./settings.html",
   "./jadwal.html",
+  "./account.html",
   "./marker-generator.html",
   "./print-markers.html",
   "./offline.html",
   "./manifest.webmanifest",
+  "./assets/account.css",
+  "./assets/auth.js",
   "./assets/style.css",
   "./assets/jadwal.css",
   "./assets/config.js",

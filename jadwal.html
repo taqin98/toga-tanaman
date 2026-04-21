@@ -74,6 +74,7 @@
             </summary>
             <div class="profile-menu__dropdown">
               <a class="profile-menu__item" href="profile.html">Profile</a>
+              <a class="profile-menu__item" href="account.html" data-auth-account-link="true">Akun</a>
               <a class="profile-menu__item" href="settings.html">Settings</a>
             </div>
           </details>
@@ -138,6 +139,9 @@
             </div>
 
             <p class="sync-status" data-sync-status>Memuat jadwal...</p>
+            <p class="auth-gate-note" data-auth-required-note hidden>
+              Login lewat menu Akun untuk tambah, edit, hapus jadwal, dan kelola label warna.
+            </p>
             <div class="agenda-list" data-agenda-list></div>
           </section>
 
@@ -350,6 +354,7 @@
 
     <script src="assets/config.js" defer></script>
     <script src="assets/theme.js" defer></script>
+    <script src="assets/auth.js" defer></script>
     <script src="assets/jadwal.js" defer></script>
     <script src="assets/pwa.js" defer></script>
   </body>

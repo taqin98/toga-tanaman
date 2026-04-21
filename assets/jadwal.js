@@ -9,7 +9,10 @@
     window.TOGA_CONFIG.apiUrl.trim()
       ? window.TOGA_CONFIG.apiUrl.trim()
       : DEFAULT_API_URL;
+  const SCHEDULE_API_BASE = deriveScheduleApiBase();
   const FETCH_TIMEOUT_MS = 12000;
+  const AUTH_REQUIRED_MESSAGE =
+    "Login lewat menu Akun diperlukan untuk menambah, mengedit, menghapus jadwal, dan kelola warna.";
   const STORAGE_KEYS = {
     events: "toga:calendar:events:v1",
     labels: "toga:calendar:labels:v1",
@@ -48,6 +51,7 @@
     notice: document.querySelector("[data-jadwal-notice]"),
     networkLoading: document.querySelector("[data-network-loading]"),
     networkLoadingText: document.querySelector("[data-network-loading-text]"),
+    authNote: document.querySelector("[data-auth-required-note]"),
   };
 
   const state = {
@@ -63,6 +67,64 @@
     statusTimerId: 0,
   };
   window.TOGA_JADWAL_STATE = state;
+
+  function getAuthApi() {
+    return window.TOGAAuth || null;
+  }
+
+  function deriveScheduleApiBase() {
+    const config = window.TOGA_CONFIG || {};
+    if (typeof config.scheduleApiUrl === "string" && config.scheduleApiUrl.trim()) {
+      return config.scheduleApiUrl.trim().replace(/\/+$/g, "");
+    }
+
+    if (typeof config.authApiUrl === "string" && config.authApiUrl.trim()) {
+      return config.authApiUrl.trim().replace(/\/auth\/?$/i, "/schedule").replace(/\/+$/g, "");
+    }
+
+    if (typeof config.aiChatUrl === "string" && config.aiChatUrl.trim()) {
+      try {
+        const url = new URL(config.aiChatUrl.trim(), window.location.href);
+        return `${url.origin}/api/schedule`;
+      } catch (_) {}
+    }
+
+    return "";
+  }
+
+  function hasScheduleBackend() {
+    return !!SCHEDULE_API_BASE;
+  }
+
+  function getCurrentUser() {
+    return getAuthApi()?.getUser?.() || null;
+  }
+
+  function getAuthToken() {
+    return String(getAuthApi()?.getToken?.() || "").trim();
+  }
+
+  function canManageCalendar() {
+    return !!getAuthApi()?.isAuthenticated?.();
+  }
+
+  function redirectToAccountPage() {
+    const authApi = getAuthApi();
+    const loginUrl =
+      authApi?.getLoginUrl?.() ||
+      `account.html?next=${encodeURIComponent(
+        `${window.location.pathname.split("/").pop() || "jadwal.html"}${window.location.search || ""}${window.location.hash || ""}`
+      )}`;
+    window.location.href = loginUrl;
+  }
+
+  function requireCalendarAuth() {
+    if (canManageCalendar()) return true;
+    setNotice(AUTH_REQUIRED_MESSAGE, "warning");
+    setStatus("Mode lihat aktif. Login diperlukan untuk fitur CRUD jadwal.");
+    window.setTimeout(redirectToAccountPage, 500);
+    return false;
+  }
 
   function readStore(key, fallback) {
     try {
@@ -377,13 +439,18 @@
     els.notice.dataset.kind = kind;
     els.notice.hidden = !message;
 
-    if (kind === "success" || kind === "warning" || kind === "danger" || kind === "info" && message) {
+    if (
+      kind === "success" ||
+      kind === "warning" ||
+      kind === "danger" ||
+      (kind === "info" && message)
+    ) {
       state.noticeTimerId = window.setTimeout(() => {
         if (!els.notice) return;
         els.notice.textContent = "";
         els.notice.hidden = true;
         state.noticeTimerId = 0;
-      }, 2000);
+      }, 3000);
     }
   }
 
@@ -405,7 +472,7 @@
         els.status.textContent = "";
         els.status.hidden = true;
         state.statusTimerId = 0;
-      }, 2000);
+      }, 3000);
     }
   }
 
@@ -487,15 +554,62 @@
     }
   }
 
+  async function fetchScheduleJSON(path, loadingMessage) {
+    if (!hasScheduleBackend()) {
+      return null;
+    }
+    return fetchRemoteJSON(`${SCHEDULE_API_BASE}${path}`, loadingMessage);
+  }
+
+  async function mutateScheduleJSON(path, options, loadingMessage) {
+    if (!hasScheduleBackend()) {
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    beginLoading(loadingMessage);
+    try {
+      const headers = {
+        Accept: "application/json",
+        ...(options?.headers || {}),
+      };
+      const token = getAuthToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const response = await fetch(`${SCHEDULE_API_BASE}${path}`, {
+        method: options?.method || "POST",
+        headers,
+        body: options?.body,
+        signal: controller.signal,
+      });
+      const data = await response.json();
+      if (!response.ok || data?.ok === false) {
+        throw new Error(String(data?.error || `HTTP ${response.status}`));
+      }
+      return data;
+    } finally {
+      window.clearTimeout(timer);
+      endLoading();
+    }
+  }
+
   async function loadLabels() {
     try {
-      const remote = ensureArrayResponse(
-        await fetchRemoteJSON(
-          `${API_URL}?mode=calendar-labels`,
-          "Sedang memuat label warna..."
-        ),
-        "calendar-labels"
-      );
+      let remote = null;
+      if (hasScheduleBackend()) {
+        const proxied = await fetchScheduleJSON("/labels", "Sedang memuat label warna...");
+        remote = ensureArrayResponse(proxied?.labels, "schedule-labels");
+      } else {
+        remote = ensureArrayResponse(
+          await fetchRemoteJSON(
+            `${API_URL}?mode=calendar-labels`,
+            "Sedang memuat label warna..."
+          ),
+          "calendar-labels"
+        );
+      }
       const normalized = normalizeLabels(remote);
       state.labels = normalized;
       writeStore(STORAGE_KEYS.labels, normalized);
@@ -515,11 +629,20 @@
   async function loadEventsForCurrentMonth() {
     const range = getMonthRange(state.monthCursor);
     try {
-      const remoteRaw = await fetchRemoteJSON(
-        `${API_URL}?mode=calendar-events&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`,
-        "Sedang memuat agenda kalender..."
-      );
-      const remote = ensureArrayResponse(remoteRaw, "calendar-events");
+      let remote = null;
+      if (hasScheduleBackend()) {
+        const proxied = await fetchScheduleJSON(
+          `/events?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`,
+          "Sedang memuat agenda kalender..."
+        );
+        remote = ensureArrayResponse(proxied?.events, "schedule-events");
+      } else {
+        const remoteRaw = await fetchRemoteJSON(
+          `${API_URL}?mode=calendar-events&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`,
+          "Sedang memuat agenda kalender..."
+        );
+        remote = ensureArrayResponse(remoteRaw, "calendar-events");
+      }
       const normalized = normalizeEvents(remote);
       const merged = mergeEventsByRange(
         normalizeEvents(readStore(STORAGE_KEYS.events, [])),
@@ -618,6 +741,7 @@
 
   function renderAgenda() {
     const items = getEventsForDate(state.selectedDate);
+    const canManage = canManageCalendar();
     if (els.agendaTitle) {
       els.agendaTitle.textContent = formatLongDate(state.selectedDate);
     }
@@ -632,7 +756,11 @@
       els.agendaList.innerHTML = `
         <div class="agenda-empty">
           <strong>Tanggal ini masih kosong.</strong>
-          <p>Buat event baru untuk jadwal kebun, rapat, atau pengingat pribadi.</p>
+          <p>${
+            canManage
+              ? "Buat event baru untuk jadwal kebun, rapat, atau pengingat pribadi."
+              : "Login terlebih dulu bila ingin menambahkan agenda pada tanggal ini."
+          }</p>
         </div>
       `;
       return;
@@ -666,7 +794,11 @@
                   : ""
               }
               <span class="agenda-item__actions">
-                <button class="mini-btn" type="button" data-event-id="${escapeHtml(event.id)}">Edit</button>
+                ${
+                  canManage
+                    ? `<button class="mini-btn" type="button" data-event-id="${escapeHtml(event.id)}">Edit</button>`
+                    : ""
+                }
                 <button class="mini-btn" type="button" data-event-google="${escapeHtml(event.id)}">Google Calendar</button>
                 <button class="mini-btn" type="button" data-event-ics="${escapeHtml(event.id)}">Kalender HP (.ics)</button>
               </span>
@@ -706,33 +838,38 @@
 
   function renderLabels() {
     if (!els.labelList) return;
+    const canManage = canManageCalendar();
     els.labelList.innerHTML = state.labels
       .map(
         (label) => `
-          <button class="label-chip" type="button" data-label-edit="${escapeHtml(label.id)}">
+          <${
+            canManage ? "button" : "span"
+          } class="label-chip" ${canManage ? `type="button" data-label-edit="${escapeHtml(label.id)}"` : ""}>
             <span class="label-chip__swatch" style="--event-color:${escapeHtml(label.color)}"></span>
             <span>${escapeHtml(label.name)}</span>
-          </button>
+          </${canManage ? "button" : "span"}>
         `
       )
       .join("");
 
     if (els.labelItems) {
-      els.labelItems.innerHTML = state.labels
-        .map(
-          (label) => `
-            <div class="label-row">
-              <button class="label-row__main" type="button" data-label-edit="${escapeHtml(label.id)}">
-                <span class="label-row__swatch" style="--event-color:${escapeHtml(label.color)}"></span>
-                <span>
-                  <strong>${escapeHtml(label.name)}</strong>
-                  <small>${escapeHtml(label.color)}</small>
-                </span>
-              </button>
-            </div>
-          `
-        )
-        .join("");
+      els.labelItems.innerHTML = canManage
+        ? state.labels
+            .map(
+              (label) => `
+                <div class="label-row">
+                  <button class="label-row__main" type="button" data-label-edit="${escapeHtml(label.id)}">
+                    <span class="label-row__swatch" style="--event-color:${escapeHtml(label.color)}"></span>
+                    <span>
+                      <strong>${escapeHtml(label.name)}</strong>
+                      <small>${escapeHtml(label.color)}</small>
+                    </span>
+                  </button>
+                </div>
+              `
+            )
+            .join("")
+        : "";
     }
 
     const editTargets = document.querySelectorAll("[data-label-edit]");
@@ -779,6 +916,7 @@
   }
 
   function openEventModal(event) {
+    if (!requireCalendarAuth()) return;
     state.editingEventId = event?.id || "";
     if (els.eventModalTitle) {
       els.eventModalTitle.textContent = event ? "Edit event" : "Buat event";
@@ -809,6 +947,7 @@
   }
 
   function openLabelModal(label) {
+    if (!requireCalendarAuth()) return;
     state.editingLabelId = label?.id || "";
     if (els.labelModalTitle) {
       els.labelModalTitle.textContent = label ? "Edit label" : "Tambah label";
@@ -833,6 +972,7 @@
     const label = getLabelById(String(formData.get("label_id") || "").trim()) || state.labels[0];
     const startDate = String(formData.get("start_date") || "").trim();
     const endDate = String(formData.get("end_date") || "").trim() || startDate;
+    const currentUser = getCurrentUser();
     return {
       id: String(formData.get("id") || "").trim(),
       title: String(formData.get("title") || "").trim(),
@@ -848,6 +988,7 @@
       notes: String(formData.get("notes") || "").trim(),
       reminder_minutes: String(formData.get("reminder_minutes") || "").trim(),
       related_plant_id: "",
+      created_by: currentUser?.email || currentUser?.username || "",
     };
   }
 
@@ -871,6 +1012,7 @@
   }
 
   async function saveEvent(payload) {
+    if (!requireCalendarAuth()) return;
     const validationError = validateEventPayload(payload);
     if (validationError) {
       setNotice(validationError, "danger");
@@ -879,16 +1021,28 @@
 
     const action = payload.id ? "updateEvent" : "createEvent";
     try {
-      const result = await postRemoteJSON(
-        action,
-        payload,
-        payload.id ? "Sedang memperbarui event..." : "Sedang menyimpan event..."
-      );
+      const result = hasScheduleBackend()
+        ? await mutateScheduleJSON(
+            "/events",
+            {
+              method: payload.id ? "PUT" : "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
+            },
+            payload.id ? "Sedang memperbarui event..." : "Sedang menyimpan event..."
+          )
+        : await postRemoteJSON(
+            action,
+            payload,
+            payload.id ? "Sedang memperbarui event..." : "Sedang menyimpan event..."
+          );
       const nextEvent = normalizeEvent(result?.event || { ...payload, id: payload.id || createId("EVT") });
       const nextEvents = upsertArrayItem(state.events, nextEvent, "id");
       state.events = normalizeEvents(nextEvents);
       writeStore(STORAGE_KEYS.events, state.events);
-      setStatus("Event tersimpan ke Google Sheets.");
+      setStatus(hasScheduleBackend() ? "Event tersimpan lewat backend jadwal." : "Event tersimpan ke Google Sheets.");
       setNotice("Event berhasil disimpan.", "success");
     } catch (_) {
       const localEvent = normalizeEvent({
@@ -909,15 +1063,24 @@
   }
 
   async function deleteEvent() {
+    if (!requireCalendarAuth()) return;
     const id = state.editingEventId;
     if (!id) return;
     if (!window.confirm("Hapus event ini?")) return;
 
     try {
-      await postRemoteJSON("deleteEvent", { id }, "Sedang menghapus event...");
+      if (hasScheduleBackend()) {
+        await mutateScheduleJSON(
+          `/events?id=${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+          "Sedang menghapus event..."
+        );
+      } else {
+        await postRemoteJSON("deleteEvent", { id }, "Sedang menghapus event...");
+      }
       state.events = state.events.filter((item) => item.id !== id);
       writeStore(STORAGE_KEYS.events, state.events);
-      setStatus("Event dihapus dari Google Sheets.");
+      setStatus(hasScheduleBackend() ? "Event dihapus lewat backend jadwal." : "Event dihapus dari Google Sheets.");
       setNotice("Event berhasil dihapus.", "success");
     } catch (_) {
       state.events = state.events.filter((item) => item.id !== id);
@@ -940,6 +1103,7 @@
   }
 
   async function saveLabel(payload) {
+    if (!requireCalendarAuth()) return;
     if (!payload.name) {
       setNotice("Nama label wajib diisi.", "danger");
       return;
@@ -954,11 +1118,23 @@
     });
 
     try {
-      const result = await postRemoteJSON(
-        "upsertLabel",
-        nextLabel,
-        payload.id ? "Sedang memperbarui label..." : "Sedang menyimpan label..."
-      );
+      const result = hasScheduleBackend()
+        ? await mutateScheduleJSON(
+            "/labels",
+            {
+              method: payload.id ? "PUT" : "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(nextLabel),
+            },
+            payload.id ? "Sedang memperbarui label..." : "Sedang menyimpan label..."
+          )
+        : await postRemoteJSON(
+            "upsertLabel",
+            nextLabel,
+            payload.id ? "Sedang memperbarui label..." : "Sedang menyimpan label..."
+          );
       const label = normalizeLabel(result?.label || nextLabel);
       state.labels = normalizeLabels(upsertArrayItem(state.labels, label, "id"));
       writeStore(STORAGE_KEYS.labels, state.labels);
@@ -974,12 +1150,21 @@
   }
 
   async function deleteLabel() {
+    if (!requireCalendarAuth()) return;
     const id = state.editingLabelId;
     if (!id) return;
     if (!window.confirm("Hapus label ini?")) return;
 
     try {
-      await postRemoteJSON("deleteLabel", { id }, "Sedang menghapus label...");
+      if (hasScheduleBackend()) {
+        await mutateScheduleJSON(
+          `/labels?id=${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+          "Sedang menghapus label..."
+        );
+      } else {
+        await postRemoteJSON("deleteLabel", { id }, "Sedang menghapus label...");
+      }
     } catch (_) {}
 
     state.labels = state.labels.filter((item) => item.id !== id);
@@ -1094,6 +1279,20 @@
   }
 
   function renderAll() {
+    const canManage = canManageCalendar();
+    document.querySelectorAll("[data-open-event-modal]").forEach((button) => {
+      button.hidden = !canManage;
+    });
+    document.querySelectorAll("[data-open-label-modal]").forEach((button) => {
+      button.hidden = !canManage;
+    });
+    if (els.authNote) {
+      els.authNote.hidden = canManage;
+    }
+    if (!canManage) {
+      closeEventModal();
+      closeLabelModal();
+    }
     renderLabels();
     renderCalendar();
     renderAgenda();
@@ -1101,10 +1300,15 @@
 
   async function init() {
     bindGlobalActions();
+    window.addEventListener("toga:authchange", () => {
+      renderAll();
+    });
     await loadLabels();
     await loadEventsForCurrentMonth();
     setNotice(
-      "UI siap. Jika Apps Script belum diperbarui, tambah/edit event akan disimpan lokal dulu.",
+      canManageCalendar()
+        ? "UI siap. Jika Apps Script belum diperbarui, tambah/edit event akan disimpan lokal dulu."
+        : "Mode baca aktif. Login di menu Akun untuk membuka fitur CRUD jadwal.",
       "info"
     );
     renderAll();
