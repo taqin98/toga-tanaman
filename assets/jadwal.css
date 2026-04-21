@@ -295,6 +295,14 @@ html[data-theme="dark"] .icon-btn {
   font-weight: 700;
 }
 
+.soft-btn--icon {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
 html[data-theme="dark"] .soft-btn {
   background: rgba(122, 183, 77, 0.14);
   color: #dff6e0;
@@ -492,7 +500,6 @@ html[data-theme="dark"] .agenda-empty {
   border: 0;
   background: transparent;
   text-align: left;
-  cursor: pointer;
 }
 
 .agenda-item__stripe {

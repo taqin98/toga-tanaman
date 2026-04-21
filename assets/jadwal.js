@@ -252,6 +252,24 @@
   }
 
   function eventToICS(event) {
+    const escapeICS = (value) =>
+      String(value || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/\n/g, "\\n")
+        .replace(/,/g, "\\,")
+        .replace(/;/g, "\\;");
+    const lines = eventToICSLines(event, escapeICS);
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//TOGA TANAMAN//JADWAL//ID",
+      "CALSCALE:GREGORIAN",
+      ...lines,
+      "END:VCALENDAR",
+    ].join("\r\n");
+  }
+
+  function eventToICSLines(event, escapeICS) {
     const dtStamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
     const uid = `${event.id || createId("EVT")}@toga-tanaman`;
     const start = event.all_day
@@ -260,17 +278,7 @@
     const end = event.all_day
       ? `DTEND;VALUE=DATE:${addIsoDateDays(event.end_date, 1).replace(/-/g, "")}`
       : `DTEND:${toICSDateTime(event.end_date, event.end_time || event.start_time || "00:00")}`;
-    const escapeICS = (value) =>
-      String(value || "")
-        .replace(/\\/g, "\\\\")
-        .replace(/\n/g, "\\n")
-        .replace(/,/g, "\\,")
-        .replace(/;/g, "\\;");
     return [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//TOGA TANAMAN//JADWAL//ID",
-      "CALSCALE:GREGORIAN",
       "BEGIN:VEVENT",
       `UID:${uid}`,
       `DTSTAMP:${dtStamp}`,
@@ -280,10 +288,15 @@
       event.location ? `LOCATION:${escapeICS(event.location)}` : "",
       event.notes ? `DESCRIPTION:${escapeICS(event.notes)}` : "",
       "END:VEVENT",
-      "END:VCALENDAR",
     ]
-      .filter(Boolean)
-      .join("\r\n");
+      .filter(Boolean);
+  }
+
+  function sanitizeFilename(value) {
+    return String(value || "event")
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 40);
   }
 
   function downloadICS(filename, content) {
@@ -684,7 +697,8 @@
       button.addEventListener("click", () => {
         const item = state.events.find((event) => event.id === button.dataset.eventIcs);
         if (!item) return;
-        downloadICS(`jadwal-${item.start_date}-${(item.title || "event").slice(0, 30)}.ics`, eventToICS(item));
+        const safeName = sanitizeFilename(item.title);
+        downloadICS(`jadwal-${item.start_date}-${safeName}.ics`, eventToICS(item));
         setNotice("File .ics diunduh. Bisa dibuka di Google Calendar / iOS / Android.", "success");
       });
     });
@@ -1019,7 +1033,15 @@
         return;
       }
       const calendarBody = items
-        .map((event) => eventToICS(event).split("\r\n").slice(4, -1).join("\r\n"))
+        .map((event) =>
+          eventToICSLines(event, (value) =>
+            String(value || "")
+              .replace(/\\/g, "\\\\")
+              .replace(/\n/g, "\\n")
+              .replace(/,/g, "\\,")
+              .replace(/;/g, "\\;")
+          ).join("\r\n")
+        )
         .join("\r\n");
       const merged = [
         "BEGIN:VCALENDAR",
