@@ -336,7 +336,7 @@ html[data-theme="dark"] .soft-btn {
   min-height: 78px;
   padding: 10px 8px;
   border: 1px solid rgba(103, 145, 109, 0.12);
-  border-radius: 18px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
   color: var(--text);
   display: grid;
@@ -358,6 +358,11 @@ html[data-theme="dark"] .calendar-day {
 .calendar-day.is-selected {
   border-color: rgba(47, 138, 83, 0.4);
   box-shadow: 0 0 0 2px rgba(47, 138, 83, 0.12);
+}
+
+html[data-theme="dark"] .calendar-day.is-selected {
+  border-color: rgba(47, 138, 83, 0.4);
+  box-shadow: 0 0 0 2px rgba(47, 138, 83, 0.5);
 }
 
 .calendar-day.is-today .calendar-day__number {
