@@ -220,6 +220,84 @@
     }).format(parseISODate(value));
   }
 
+  function toICSDateTime(dateStr, timeStr = "") {
+    const cleanDate = String(dateStr || "").replace(/-/g, "");
+    if (!cleanDate || cleanDate.length !== 8) return "";
+    if (!timeStr) return `${cleanDate}T000000`;
+    const cleanTime = String(timeStr || "").replace(":", "");
+    return `${cleanDate}T${cleanTime}00`;
+  }
+
+  function addIsoDateDays(dateStr, days) {
+    return toISODate(addDays(parseISODate(dateStr), days));
+  }
+
+  function buildGoogleCalendarUrl(event) {
+    const base = "https://calendar.google.com/calendar/render?action=TEMPLATE";
+    const start = event.all_day
+      ? event.start_date.replace(/-/g, "")
+      : toICSDateTime(event.start_date, event.start_time || "00:00");
+    const end = event.all_day
+      ? addIsoDateDays(event.end_date, 1).replace(/-/g, "")
+      : toICSDateTime(event.end_date, event.end_time || event.start_time || "00:00");
+    const details = event.notes || "";
+    const location = event.location || "";
+    const query = new URLSearchParams({
+      text: event.title || "Event TOGA",
+      dates: `${start}/${end}`,
+      details,
+      location,
+    });
+    return `${base}&${query.toString()}`;
+  }
+
+  function eventToICS(event) {
+    const dtStamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const uid = `${event.id || createId("EVT")}@toga-tanaman`;
+    const start = event.all_day
+      ? `DTSTART;VALUE=DATE:${event.start_date.replace(/-/g, "")}`
+      : `DTSTART:${toICSDateTime(event.start_date, event.start_time || "00:00")}`;
+    const end = event.all_day
+      ? `DTEND;VALUE=DATE:${addIsoDateDays(event.end_date, 1).replace(/-/g, "")}`
+      : `DTEND:${toICSDateTime(event.end_date, event.end_time || event.start_time || "00:00")}`;
+    const escapeICS = (value) =>
+      String(value || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/\n/g, "\\n")
+        .replace(/,/g, "\\,")
+        .replace(/;/g, "\\;");
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//TOGA TANAMAN//JADWAL//ID",
+      "CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTAMP:${dtStamp}`,
+      start,
+      end,
+      `SUMMARY:${escapeICS(event.title)}`,
+      event.location ? `LOCATION:${escapeICS(event.location)}` : "",
+      event.notes ? `DESCRIPTION:${escapeICS(event.notes)}` : "",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ]
+      .filter(Boolean)
+      .join("\r\n");
+  }
+
+  function downloadICS(filename, content) {
+    const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function getMonthRange(date) {
     const monthStart = startOfMonth(date);
     const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
@@ -550,7 +628,7 @@
     els.agendaList.innerHTML = items
       .map(
         (event) => `
-          <button class="agenda-item" type="button" data-event-id="${escapeHtml(event.id)}">
+          <article class="agenda-item">
             <span class="agenda-item__stripe" style="--event-color:${escapeHtml(
               event.label_color
             )}"></span>
@@ -574,8 +652,13 @@
                   ? `<span class="agenda-item__notes">${escapeHtml(event.notes)}</span>`
                   : ""
               }
+              <span class="agenda-item__actions">
+                <button class="mini-btn" type="button" data-event-id="${escapeHtml(event.id)}">Edit</button>
+                <button class="mini-btn" type="button" data-event-google="${escapeHtml(event.id)}">Google Calendar</button>
+                <button class="mini-btn" type="button" data-event-ics="${escapeHtml(event.id)}">Kalender HP (.ics)</button>
+              </span>
             </span>
-          </button>
+          </article>
         `
       )
       .join("");
@@ -586,6 +669,23 @@
         if (item) {
           openEventModal(item);
         }
+      });
+    });
+
+    Array.from(els.agendaList.querySelectorAll("[data-event-google]")).forEach((button) => {
+      button.addEventListener("click", () => {
+        const item = state.events.find((event) => event.id === button.dataset.eventGoogle);
+        if (!item) return;
+        window.open(buildGoogleCalendarUrl(item), "_blank", "noopener");
+      });
+    });
+
+    Array.from(els.agendaList.querySelectorAll("[data-event-ics]")).forEach((button) => {
+      button.addEventListener("click", () => {
+        const item = state.events.find((event) => event.id === button.dataset.eventIcs);
+        if (!item) return;
+        downloadICS(`jadwal-${item.start_date}-${(item.title || "event").slice(0, 30)}.ics`, eventToICS(item));
+        setNotice("File .ics diunduh. Bisa dibuka di Google Calendar / iOS / Android.", "success");
       });
     });
   }
@@ -910,6 +1010,27 @@
       state.monthCursor = startOfMonth(today);
       state.selectedDate = toISODate(today);
       loadEventsForCurrentMonth().then(renderAll);
+    });
+
+    root.querySelector("[data-export-day-ics]")?.addEventListener("click", () => {
+      const items = getEventsForDate(state.selectedDate);
+      if (items.length === 0) {
+        setNotice("Tidak ada event di tanggal ini untuk diexport.", "warning");
+        return;
+      }
+      const calendarBody = items
+        .map((event) => eventToICS(event).split("\r\n").slice(4, -1).join("\r\n"))
+        .join("\r\n");
+      const merged = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//TOGA TANAMAN//JADWAL//ID",
+        "CALSCALE:GREGORIAN",
+        calendarBody,
+        "END:VCALENDAR",
+      ].join("\r\n");
+      downloadICS(`jadwal-${state.selectedDate}.ics`, merged);
+      setNotice("File .ics berhasil dibuat untuk kalender HP / Google Calendar.", "success");
     });
 
     document.querySelectorAll("[data-open-event-modal]").forEach((button) => {
