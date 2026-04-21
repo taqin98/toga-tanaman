@@ -32,6 +32,7 @@ const arDock = document.getElementById("arDock");
 const btnDebugToggle = document.getElementById("btnDebugToggle");
 const scanFrame = document.querySelector(".ar-scan-frame");
 const root = document.getElementById("root");
+const sceneEl = document.querySelector("a-scene");
 
 const debugPanel = document.getElementById("debugPanel");
 const debugSelect = document.getElementById("debugSelect");
@@ -49,6 +50,7 @@ const plantById = new Map();
 const debugEvents = [];
 let scanState = "loading";
 let arDataSource = "remote";
+const IS_ANDROID = /android/i.test(window.navigator.userAgent || "");
 
 if (btnDebugToggle && !DEBUG_MODE) {
   btnDebugToggle.style.visibility = "hidden";
@@ -56,6 +58,103 @@ if (btnDebugToggle && !DEBUG_MODE) {
 }
 
 updateActiveUI();
+
+function getViewportSize() {
+  const viewport = window.visualViewport;
+  return {
+    width: Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 0),
+    height: Math.round(
+      viewport?.height || window.innerHeight || document.documentElement.clientHeight || 0
+    ),
+  };
+}
+
+function fitContainRect(containerWidth, containerHeight, sourceWidth, sourceHeight) {
+  const safeContainerWidth = Math.max(1, Number(containerWidth) || 1);
+  const safeContainerHeight = Math.max(1, Number(containerHeight) || 1);
+  const safeSourceWidth = Math.max(1, Number(sourceWidth) || 1);
+  const safeSourceHeight = Math.max(1, Number(sourceHeight) || 1);
+  const sourceRatio = safeSourceWidth / safeSourceHeight;
+  const containerRatio = safeContainerWidth / safeContainerHeight;
+
+  if (containerRatio > sourceRatio) {
+    const height = safeContainerHeight;
+    return {
+      width: Math.round(height * sourceRatio),
+      height: Math.round(height),
+    };
+  }
+
+  const width = safeContainerWidth;
+  return {
+    width: Math.round(width),
+    height: Math.round(width / sourceRatio),
+  };
+}
+
+function applyArCameraViewport() {
+  if (!IS_ANDROID) return;
+
+  const videoEl =
+    document.querySelector("#arjs-video") ||
+    document.querySelector("video");
+  const canvasEl =
+    document.querySelector(".a-canvas") ||
+    (sceneEl && sceneEl.canvas) ||
+    document.querySelector("canvas");
+
+  if (!videoEl || !canvasEl) return;
+
+  const viewport = getViewportSize();
+  const videoWidth = videoEl.videoWidth || 640;
+  const videoHeight = videoEl.videoHeight || 480;
+  const frame = fitContainRect(viewport.width, viewport.height, videoWidth, videoHeight);
+  const offsetLeft = Math.round((viewport.width - frame.width) / 2);
+  const offsetTop = Math.round((viewport.height - frame.height) / 2);
+
+  [videoEl, canvasEl].forEach((element) => {
+    if (!element) return;
+    element.style.position = "fixed";
+    element.style.left = `${offsetLeft}px`;
+    element.style.top = `${offsetTop}px`;
+    element.style.width = `${frame.width}px`;
+    element.style.height = `${frame.height}px`;
+    element.style.maxWidth = "none";
+    element.style.maxHeight = "none";
+  });
+}
+
+function bindAndroidCameraViewportFix() {
+  if (!IS_ANDROID) return;
+
+  const watchVideo = () => {
+    const videoEl =
+      document.querySelector("#arjs-video") ||
+      document.querySelector("video");
+    if (!videoEl) return false;
+
+    videoEl.setAttribute("playsinline", "true");
+    videoEl.setAttribute("webkit-playsinline", "true");
+
+    if (!videoEl.dataset.viewportFixBound) {
+      videoEl.dataset.viewportFixBound = "true";
+      videoEl.addEventListener("loadedmetadata", applyArCameraViewport);
+      videoEl.addEventListener("playing", applyArCameraViewport);
+    }
+
+    applyArCameraViewport();
+    return true;
+  };
+
+  if (watchVideo()) return;
+
+  const observer = new MutationObserver(() => {
+    if (!watchVideo()) return;
+    observer.disconnect();
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+}
 
 function setScanFrameVisible(visible) {
   if (!scanFrame) return;
@@ -624,5 +723,14 @@ async function main() {
     setHudText("AR TOGA • Gagal memuat data (cek koneksi/API/data lokal).");
   }
 }
+
+bindAndroidCameraViewportFix();
+window.addEventListener("resize", applyArCameraViewport);
+window.addEventListener("orientationchange", () => {
+  window.setTimeout(applyArCameraViewport, 180);
+});
+sceneEl?.addEventListener("loaded", () => {
+  window.setTimeout(applyArCameraViewport, 180);
+});
 
 main();
