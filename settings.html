@@ -3,8 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Sistem Informasi Tanaman Obat Keluarga (TOGA) berbasis QR Code untuk RT 09 PKK. Temukan informasi lengkap tentang tanaman obat keluarga, manfaat, dan cara penggunaannya dengan mudah melalui pemindaian QR Code." />
-    <title>Profile TOGA</title>
+    <meta
+      name="description"
+      content="Pengaturan aplikasi TOGA RT 09 untuk tema tampilan dan preferensi dasar."
+    />
+    <title>Settings TOGA</title>
     <meta name="theme-color" content="#1f7a3e" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,39 +16,18 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/icons/icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
-    <link rel="apple-touch-startup-image" href="assets/screenshots/install-mobile.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" /></noscript>
-    <script>
-      (function () {
-        var splashKey = "toga:splash:shown";
-        var installed =
-          (typeof window.matchMedia === "function" &&
-            window.matchMedia("(display-mode: standalone)").matches) ||
-          window.navigator.standalone === true ||
-          document.referrer.indexOf("android-app://") === 0;
-        var ua = window.navigator.userAgent || "";
-        var isiOS = /iphone|ipad|ipod/i.test(ua);
-        document.documentElement.classList.add(installed ? "pwa-installed" : "pwa-browser");
-        if (isiOS) {
-          document.documentElement.classList.add("ios-webkit");
-        }
-        try {
-          var isInternalNav = document.referrer.indexOf(window.location.origin) === 0;
-          if (!isInternalNav) {
-            sessionStorage.removeItem(splashKey);
-          }
-          var splashShown = sessionStorage.getItem(splashKey) === "1";
-          if (splashShown) {
-            document.documentElement.classList.add("pwa-splash-skip");
-          } else if (installed) {
-            document.documentElement.classList.add("pwa-launch-pending");
-          }
-        } catch (_) {}
-      })();
-    </script>
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap"
+      />
+    </noscript>
     <script>
       (function () {
         var key = "toga:theme";
@@ -67,100 +49,6 @@
       })();
     </script>
     <style>
-      html,
-      body {
-        background-color: #dff0dd;
-      }
-      html[data-theme="dark"],
-      html[data-theme="dark"] body {
-        background-color: #0f1a14;
-      }
-      #pwaBootSplash {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: none;
-        place-items: center;
-        background: linear-gradient(150deg, #2f7f48, #87ba58);
-        color: #f3fbf8;
-        font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-        opacity: 1;
-        transition: opacity 0.32s ease;
-      }
-      @media (display-mode: standalone) {
-        #pwaBootSplash {
-          display: grid;
-        }
-      }
-      html.pwa-installed #pwaBootSplash {
-        display: grid;
-      }
-      html.pwa-splash-skip #pwaBootSplash {
-        display: none !important;
-      }
-      html.pwa-browser #pwaBootSplash {
-        display: none !important;
-      }
-      html.pwa-launch-pending #pwaBootSplash {
-        display: grid !important;
-        opacity: 1 !important;
-      }
-      html.pwa-launch-pending body > :not(#pwaBootSplash) {
-        visibility: hidden;
-      }
-      html.ios-webkit.pwa-launch-pending body > :not(#pwaBootSplash),
-      html.ios-webkit.pwa-launch-pending body > :not(#pwaBootSplash) * {
-        animation: none !important;
-        transition: none !important;
-      }
-      #pwaBootSplash.is-hide {
-        opacity: 0;
-        pointer-events: none;
-      }
-      .pwa-launch-splash__inner {
-        display: grid;
-        justify-items: center;
-        gap: 10px;
-        text-align: center;
-        padding: 18px;
-      }
-      .pwa-launch-splash__logo {
-        width: 72px;
-        height: 72px;
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26);
-        background: rgba(255, 255, 255, 0.16);
-        object-fit: cover;
-        animation: pwaLogoPulse 1.4s ease-in-out infinite;
-      }
-      .pwa-launch-splash__title {
-        font-size: 16px;
-        font-weight: 800;
-        letter-spacing: 0.2px;
-      }
-      .pwa-launch-splash__loading {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 12px;
-        color: rgba(243, 251, 248, 0.92);
-      }
-      .pwa-launch-splash__spinner {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, 0.28);
-        border-top-color: #ffffff;
-        animation: pwaSpin 0.9s linear infinite;
-      }
-      @keyframes pwaSpin {
-        to { transform: rotate(360deg); }
-      }
-      @keyframes pwaLogoPulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.045); }
-      }
       :root {
         --bg: #eef7ef;
         --bg2: #d9ecd8;
@@ -178,7 +66,9 @@
         --line-soft: rgba(166, 209, 181, 0.13);
         --line: rgba(166, 209, 181, 0.24);
       }
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
         min-height: 100vh;
@@ -188,7 +78,6 @@
           radial-gradient(720px 360px at 15% -4%, rgba(66, 164, 85, 0.2), transparent 68%),
           radial-gradient(680px 420px at 100% 10%, rgba(158, 205, 103, 0.28), transparent 66%),
           linear-gradient(170deg, var(--bg), var(--bg2));
-        transition: background 0.26s ease, color 0.2s ease;
       }
       .topbar {
         position: sticky;
@@ -197,7 +86,6 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.75);
         background: rgba(235, 247, 233, 0.86);
         backdrop-filter: blur(18px);
-        transition: background 0.26s ease, border-color 0.26s ease;
       }
       html[data-theme="dark"] .topbar {
         border-bottom-color: rgba(166, 209, 181, 0.16);
@@ -216,7 +104,6 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        min-width: 0;
       }
       .top-wrap__actions {
         flex: 0 0 auto;
@@ -330,7 +217,6 @@
         max-width: 920px;
         margin: 0 auto;
         padding: 16px 14px calc(110px + env(safe-area-inset-bottom));
-        animation: pageFadeUp 0.45s ease both;
       }
       .card {
         border-radius: 20px;
@@ -339,89 +225,55 @@
         box-shadow: 0 20px 36px rgba(64, 107, 72, 0.18);
         padding: 14px;
         margin-bottom: 12px;
-        transition: background 0.26s ease, border-color 0.26s ease, box-shadow 0.26s ease;
       }
       html[data-theme="dark"] .card {
         background: linear-gradient(168deg, rgba(24, 39, 30, 0.96), rgba(17, 30, 23, 0.94));
         box-shadow: 0 20px 36px rgba(0, 0, 0, 0.35);
       }
-      .profile-head {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .avatar {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(145deg, #2d8a53, #78b840);
-        border: 1px solid rgba(255, 255, 255, 0.55);
-        overflow: hidden;
-      }
-      .avatar-mark {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: inherit;
-      }
-      .name {
-        margin: 0;
+      .section-title {
+        margin: 0 0 6px;
         font-size: 16px;
+        font-weight: 800;
       }
-      .role {
-        margin: 2px 0 0;
-        color: var(--muted);
-        font-size: 12px;
-      }
-      .meta {
+      .section-desc {
         margin: 0;
-        padding-left: 18px;
-      }
-      .meta li {
-        margin: 7px 0;
-        color: #2d5841;
+        color: var(--muted);
         font-size: 13px;
-      }
-      html[data-theme="dark"] .meta li {
-        color: #cde2d4;
+        line-height: 1.6;
       }
       .setting-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        gap: 14px;
       }
       .setting-title {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 700;
+        margin: 0 0 4px;
+        font-size: 14px;
+        font-weight: 800;
       }
       .setting-desc {
-        margin: 3px 0 0;
+        margin: 0;
         color: var(--muted);
         font-size: 12px;
+        line-height: 1.5;
       }
       .theme-switch {
         position: relative;
-        width: 52px;
-        height: 30px;
-        cursor: pointer;
+        display: inline-flex;
       }
       .theme-switch input {
         position: absolute;
-        inset: 0;
         opacity: 0;
-        margin: 0;
+        pointer-events: none;
       }
       .theme-switch-track {
-        display: block;
-        width: 100%;
-        height: 100%;
+        width: 58px;
+        height: 32px;
         border-radius: 999px;
-        background: rgba(120, 184, 64, 0.35);
-        border: 1px solid rgba(101, 145, 108, 0.28);
+        background: rgba(50, 124, 73, 0.18);
+        border: 1px solid rgba(50, 124, 73, 0.2);
+        position: relative;
         transition: background 0.2s ease, border-color 0.2s ease;
       }
       .theme-switch-track::after {
@@ -429,19 +281,24 @@
         position: absolute;
         top: 3px;
         left: 3px;
-        width: 22px;
-        height: 22px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         background: #ffffff;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
-        transition: transform 0.2s ease;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.16);
+        transition: transform 0.22s ease;
       }
       .theme-switch input:checked + .theme-switch-track {
-        background: rgba(95, 190, 127, 0.46);
-        border-color: rgba(157, 203, 173, 0.42);
+        background: rgba(122, 183, 77, 0.4);
+        border-color: rgba(122, 183, 77, 0.48);
       }
       .theme-switch input:checked + .theme-switch-track::after {
-        transform: translateX(22px);
+        transform: translateX(26px);
+      }
+      .meta {
+        margin: 0;
+        padding-left: 18px;
+        line-height: 1.7;
       }
       .bottom-nav {
         position: fixed;
@@ -455,7 +312,6 @@
         border: 1px solid rgba(101, 145, 108, 0.18);
         backdrop-filter: blur(20px);
         box-shadow: 0 14px 30px rgba(64, 107, 72, 0.16);
-        transition: background 0.26s ease, border-color 0.26s ease, box-shadow 0.26s ease;
       }
       html[data-theme="dark"] .bottom-nav {
         background: linear-gradient(160deg, rgba(18, 31, 24, 0.9), rgba(13, 22, 17, 0.86));
@@ -484,7 +340,6 @@
         color: #5c7762;
         font-size: 10px;
         font-weight: 700;
-        transition: color 0.2s ease;
       }
       html[data-theme="dark"] .bottom-nav-link {
         color: #9db6a7;
@@ -506,7 +361,6 @@
         place-items: center;
         border: 1px solid rgba(103, 145, 109, 0.24);
         background: rgba(229, 244, 226, 0.8);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
       html[data-theme="dark"] .bottom-nav-icon-wrap {
         border-color: rgba(157, 203, 173, 0.24);
@@ -521,37 +375,9 @@
         transform: translateY(-1px) scale(1.03);
         box-shadow: 0 10px 16px rgba(85, 148, 84, 0.22);
       }
-      @keyframes pageFadeUp {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        *,
-        *::before,
-        *::after {
-          animation: none !important;
-          transition: none !important;
-        }
-      }
     </style>
   </head>
   <body>
-    <div id="pwaBootSplash" class="pwa-launch-splash" aria-hidden="true">
-      <div class="pwa-launch-splash__inner">
-        <img class="pwa-launch-splash__logo" src="assets/icons/icon-192.png" alt="Logo TOGA" />
-        <div class="pwa-launch-splash__title">TOGA RT 09</div>
-        <div class="pwa-launch-splash__loading">
-          <span class="pwa-launch-splash__spinner" aria-hidden="true"></span>
-          <span>Memuat aplikasi...</span>
-        </div>
-      </div>
-    </div>
     <header class="topbar">
       <div class="top-wrap">
         <div class="top-wrap__main">
@@ -561,8 +387,8 @@
             </svg>
           </a>
           <div>
-            <h1 class="title">Profile Komunitas</h1>
-            <p class="subtitle">Informasi pengelola TOGA RT 09</p>
+            <h1 class="title">Settings</h1>
+            <p class="subtitle">Atur preferensi dasar aplikasi TOGA</p>
           </div>
         </div>
         <div class="top-wrap__actions">
@@ -574,8 +400,8 @@
               </svg>
             </summary>
             <div class="profile-menu__dropdown">
-              <a class="profile-menu__item is-active" href="profile.html">Profile</a>
-              <a class="profile-menu__item" href="settings.html">Settings</a>
+              <a class="profile-menu__item" href="profile.html">Profile</a>
+              <a class="profile-menu__item is-active" href="settings.html">Settings</a>
             </div>
           </details>
         </div>
@@ -584,21 +410,32 @@
 
     <main class="container">
       <section class="card">
-        <div class="profile-head">
-          <div class="avatar">
-            <img class="avatar-mark" src="assets/icons/icon-192.png" alt="Logo TOGA" />
-          </div>
+        <h2 class="section-title">Tema Tampilan</h2>
+        <div class="setting-row">
           <div>
-            <h2 class="name">Tim TOGA RT 09</h2>
-            <p class="role">Pengelola Kebun Obat Keluarga</p>
+            <p class="setting-title">Mode Gelap</p>
+            <p class="setting-desc">Aktifkan tampilan gelap atau kembali ke mode terang kapan saja.</p>
           </div>
+          <label class="theme-switch" aria-label="Toggle dark mode">
+            <input id="themeToggle" data-theme-toggle type="checkbox" />
+            <span class="theme-switch-track"></span>
+          </label>
         </div>
       </section>
+
+      <section class="card">
+        <h2 class="section-title">Tentang Pengaturan</h2>
+        <p class="section-desc">
+          Halaman ini disiapkan untuk preferensi aplikasi seperti tema, perilaku notifikasi,
+          atau pengaturan tambahan lain saat fitur berikutnya ditambahkan.
+        </p>
+      </section>
+
       <section class="card">
         <ul class="meta">
-          <li>Program: Edukasi dan pemanfaatan tanaman obat keluarga.</li>
-          <li>Kegiatan: Pemeliharaan kebun, pelatihan, dan dokumentasi warga.</li>
-          <li>Kontak: Koordinator RT/PKK setempat.</li>
+          <li>Pengaturan tersimpan di browser yang sedang dipakai.</li>
+          <li>Perubahan tema langsung berlaku di seluruh halaman aplikasi.</li>
+          <li>Menu lain bisa ditambahkan di halaman ini tanpa mengubah navigasi utama.</li>
         </ul>
       </section>
     </main>
@@ -664,7 +501,6 @@
       </ul>
     </nav>
 
-    <script src="assets/config.js" defer></script>
     <script src="assets/theme.js" defer></script>
     <script src="assets/pwa.js" defer></script>
   </body>

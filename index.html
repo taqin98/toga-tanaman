@@ -176,12 +176,28 @@
   </div>
   <header class="topbar">
     <div class="brand">
-      <div class="logo">
-        <img class="logo-mark" src="assets/icons/icon-192.png" alt="Logo TOGA" />
+      <div class="brand__main">
+        <div class="logo">
+          <img class="logo-mark" src="assets/icons/icon-192.png" alt="Logo TOGA" />
+        </div>
+        <div class="brand__copy">
+          <div class="title">TOGA RT 09</div>
+          <div class="subtitle">Kebun Obat Keluarga • RT 09 PKK</div>
+        </div>
       </div>
-      <div>
-        <div class="title">TOGA RT 09</div>
-        <div class="subtitle">Kebun Obat Keluarga • RT 09 PKK</div>
+      <div class="brand__actions">
+        <details class="profile-menu">
+          <summary class="profile-menu__trigger" aria-label="Buka menu pengguna">
+            <svg class="profile-menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7" />
+              <path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </summary>
+          <div class="profile-menu__dropdown">
+            <a class="profile-menu__item" href="profile.html">Profile</a>
+            <a class="profile-menu__item" href="settings.html">Settings</a>
+          </div>
+        </details>
       </div>
     </div>
   </header>
@@ -334,14 +350,15 @@
         </a>
       </li>
       <li class="bottom-nav-item">
-        <a class="bottom-nav-link" href="profile.html">
+        <a class="bottom-nav-link" href="jadwal.html">
           <span class="bottom-nav-icon-wrap" aria-hidden="true">
             <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M7 5.5h10A1.5 1.5 0 0 1 18.5 7v10A1.5 1.5 0 0 1 17 18.5H7A1.5 1.5 0 0 1 5.5 17V7A1.5 1.5 0 0 1 7 5.5Z" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M8 4v3M16 4v3M5.5 9.5h13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M9 13h2M13 13h2M9 16h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
             </svg>
           </span>
-          <span class="bottom-nav-label">Profile</span>
+          <span class="bottom-nav-label">Jadwal</span>
         </a>
       </li>
     </ul>
