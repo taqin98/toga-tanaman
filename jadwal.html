@@ -126,7 +126,15 @@
                 <h3 class="agenda-title" data-agenda-title>Memuat tanggal...</h3>
                 <p class="agenda-subtitle" data-agenda-subtitle>Menyusun agenda...</p>
               </div>
-              <button class="primary-btn" type="button" data-open-event-modal>Tambah Event</button>
+              <div class="agenda-head__actions">
+                <button class="soft-btn soft-btn--icon" type="button" data-export-day-ics aria-label="Export jadwal ke file iCalendar">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 4v10m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 15.5v2a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 19 17.5v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </button>
+                <button class="primary-btn" type="button" data-open-event-modal>Tambah Event</button>
+              </div>
             </div>
 
             <p class="sync-status" data-sync-status>Memuat jadwal...</p>

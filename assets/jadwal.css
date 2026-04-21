@@ -295,6 +295,14 @@ html[data-theme="dark"] .icon-btn {
   font-weight: 700;
 }
 
+.soft-btn--icon {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
 html[data-theme="dark"] .soft-btn {
   background: rgba(122, 183, 77, 0.14);
   color: #dff6e0;
@@ -420,6 +428,13 @@ html[data-theme="dark"] .calendar-day.is-selected {
   gap: 12px;
 }
 
+.agenda-head__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .agenda-title,
 .label-title {
   margin: 0;
@@ -485,7 +500,6 @@ html[data-theme="dark"] .agenda-empty {
   border: 0;
   background: transparent;
   text-align: left;
-  cursor: pointer;
 }
 
 .agenda-item__stripe {
@@ -550,6 +564,30 @@ html[data-theme="dark"] .agenda-item__body {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.agenda-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-btn {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(103, 145, 109, 0.2);
+  background: rgba(62, 141, 82, 0.08);
+  color: #1f7a3e;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .mini-btn {
+  border-color: rgba(157, 203, 173, 0.2);
+  background: rgba(122, 183, 77, 0.12);
+  color: #dff6e0;
 }
 
 .label-grid {
