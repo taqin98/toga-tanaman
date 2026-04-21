@@ -226,5 +226,11 @@
     "detail_url": "https://taqin98.github.io/toga-tanaman/?id=kapulaga",
     "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dkapulaga",
     "qr_file": "markers/qr/kapulaga.png"
+  },
+  {
+    "id": "seledri",
+    "detail_url": "https://taqin98.github.io/toga-tanaman/?id=seledri",
+    "qr_api_url": "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Ftaqin98.github.io%2Ftoga-tanaman%2F%3Fid%3Dseledri",
+    "qr_file": "markers/qr/seledri.png"
   }
 ]
