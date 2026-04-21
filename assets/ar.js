@@ -89,6 +89,27 @@ function fitContainRect(containerWidth, containerHeight, sourceWidth, sourceHeig
   };
 }
 
+function getNormalizedSourceSize(viewportWidth, viewportHeight, sourceWidth, sourceHeight) {
+  const safeViewportWidth = Math.max(1, Number(viewportWidth) || 1);
+  const safeViewportHeight = Math.max(1, Number(viewportHeight) || 1);
+  const safeSourceWidth = Math.max(1, Number(sourceWidth) || 1);
+  const safeSourceHeight = Math.max(1, Number(sourceHeight) || 1);
+  const viewportIsPortrait = safeViewportHeight >= safeViewportWidth;
+  const sourceIsPortrait = safeSourceHeight >= safeSourceWidth;
+
+  if (viewportIsPortrait !== sourceIsPortrait) {
+    return {
+      width: safeSourceHeight,
+      height: safeSourceWidth,
+    };
+  }
+
+  return {
+    width: safeSourceWidth,
+    height: safeSourceHeight,
+  };
+}
+
 function applyArCameraViewport() {
   if (!IS_ANDROID) return;
 
@@ -103,9 +124,13 @@ function applyArCameraViewport() {
   if (!videoEl || !canvasEl) return;
 
   const viewport = getViewportSize();
-  const videoWidth = videoEl.videoWidth || 640;
-  const videoHeight = videoEl.videoHeight || 480;
-  const frame = fitContainRect(viewport.width, viewport.height, videoWidth, videoHeight);
+  const source = getNormalizedSourceSize(
+    viewport.width,
+    viewport.height,
+    videoEl.videoWidth || 640,
+    videoEl.videoHeight || 480
+  );
+  const frame = fitContainRect(viewport.width, viewport.height, source.width, source.height);
   const offsetLeft = Math.round((viewport.width - frame.width) / 2);
   const offsetTop = Math.round((viewport.height - frame.height) / 2);
 
@@ -118,6 +143,8 @@ function applyArCameraViewport() {
     element.style.height = `${frame.height}px`;
     element.style.maxWidth = "none";
     element.style.maxHeight = "none";
+    element.style.transform = "translate3d(0,0,0)";
+    element.style.transformOrigin = "center center";
   });
 }
 
