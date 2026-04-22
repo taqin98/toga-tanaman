@@ -37,6 +37,14 @@ html[data-theme="dark"] {
   box-sizing: border-box;
 }
 
+/* ── Prevent iOS auto-zoom on form focus ── */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+
 html,
 body {
   min-height: 100%;
@@ -1155,11 +1163,11 @@ html[data-theme="dark"] .ai-chat__panel {
   height: 18px;
   display: block;
   flex: 0 0 auto;
-  background: center / contain no-repeat url("icons/icons8-ai-stars-100.png");
+  background: center / contain no-repeat url("../icons/icons8-ai-stars-100.png");
 }
 
 html[data-theme="dark"] .ai-chat__title-icon {
-  background-image: url("icons/icons8-ai-stars-100-white.png");
+  background-image: url("../icons/icons8-ai-stars-100-white.png");
 }
 
 .ai-chat__subtitle {
