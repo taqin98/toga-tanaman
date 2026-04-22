@@ -126,6 +126,16 @@
     return false;
   }
 
+  function requireScheduleWriteBackend() {
+    if (hasScheduleBackend()) return true;
+    setNotice(
+      "Backend jadwal belum aktif. Simpan, ubah, dan hapus hanya bisa lewat backend terproteksi.",
+      "warning"
+    );
+    setStatus("Aksi tulis kalender dinonaktifkan sampai schedule backend tersedia.");
+    return false;
+  }
+
   function readStore(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -515,34 +525,6 @@
         headers: { Accept: "application/json" },
         signal: controller.signal,
         cache: "default",
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return await response.json();
-    } finally {
-      window.clearTimeout(timer);
-      endLoading();
-    }
-  }
-
-  async function postRemoteJSON(
-    action,
-    payload,
-    loadingMessage = "Sedang mengirim perubahan..."
-  ) {
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    beginLoading(loadingMessage);
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        signal: controller.signal,
-        body: JSON.stringify({ action, payload }),
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -1013,47 +995,35 @@
 
   async function saveEvent(payload) {
     if (!requireCalendarAuth()) return;
+    if (!requireScheduleWriteBackend()) return;
     const validationError = validateEventPayload(payload);
     if (validationError) {
       setNotice(validationError, "danger");
       return;
     }
 
-    const action = payload.id ? "updateEvent" : "createEvent";
     try {
-      const result = hasScheduleBackend()
-        ? await mutateScheduleJSON(
-            "/events",
-            {
-              method: payload.id ? "PUT" : "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(payload),
-            },
-            payload.id ? "Sedang memperbarui event..." : "Sedang menyimpan event..."
-          )
-        : await postRemoteJSON(
-            action,
-            payload,
-            payload.id ? "Sedang memperbarui event..." : "Sedang menyimpan event..."
-          );
+      const result = await mutateScheduleJSON(
+        "/events",
+        {
+          method: payload.id ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+        payload.id ? "Sedang memperbarui event..." : "Sedang menyimpan event..."
+      );
       const nextEvent = normalizeEvent(result?.event || { ...payload, id: payload.id || createId("EVT") });
       const nextEvents = upsertArrayItem(state.events, nextEvent, "id");
       state.events = normalizeEvents(nextEvents);
       writeStore(STORAGE_KEYS.events, state.events);
-      setStatus(hasScheduleBackend() ? "Event tersimpan lewat backend jadwal." : "Event tersimpan ke Google Sheets.");
+      setStatus("Event tersimpan lewat backend jadwal.");
       setNotice("Event berhasil disimpan.", "success");
-    } catch (_) {
-      const localEvent = normalizeEvent({
-        ...payload,
-        id: payload.id || createId("EVT"),
-        status: "1",
-      });
-      state.events = normalizeEvents(upsertArrayItem(state.events, localEvent, "id"));
-      writeStore(STORAGE_KEYS.events, state.events);
-      setStatus("Event disimpan lokal karena endpoint kalender belum aktif.");
-      setNotice("Event disimpan lokal. Update Apps Script agar sinkron ke Sheets.", "warning");
+    } catch (error) {
+      setStatus("Gagal menyimpan event ke backend jadwal.");
+      setNotice(String(error?.message || error || "Gagal menyimpan event."), "danger");
+      return;
     }
 
     state.selectedDate = payload.start_date;
@@ -1064,29 +1034,25 @@
 
   async function deleteEvent() {
     if (!requireCalendarAuth()) return;
+    if (!requireScheduleWriteBackend()) return;
     const id = state.editingEventId;
     if (!id) return;
     if (!window.confirm("Hapus event ini?")) return;
 
     try {
-      if (hasScheduleBackend()) {
-        await mutateScheduleJSON(
-          `/events?id=${encodeURIComponent(id)}`,
-          { method: "DELETE" },
-          "Sedang menghapus event..."
-        );
-      } else {
-        await postRemoteJSON("deleteEvent", { id }, "Sedang menghapus event...");
-      }
+      await mutateScheduleJSON(
+        `/events?id=${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+        "Sedang menghapus event..."
+      );
       state.events = state.events.filter((item) => item.id !== id);
       writeStore(STORAGE_KEYS.events, state.events);
-      setStatus(hasScheduleBackend() ? "Event dihapus lewat backend jadwal." : "Event dihapus dari Google Sheets.");
+      setStatus("Event dihapus lewat backend jadwal.");
       setNotice("Event berhasil dihapus.", "success");
-    } catch (_) {
-      state.events = state.events.filter((item) => item.id !== id);
-      writeStore(STORAGE_KEYS.events, state.events);
-      setStatus("Event dihapus dari cache lokal.");
-      setNotice("Event dihapus lokal. Sinkronkan Apps Script untuk hapus di Sheets.", "warning");
+    } catch (error) {
+      setStatus("Gagal menghapus event dari backend jadwal.");
+      setNotice(String(error?.message || error || "Gagal menghapus event."), "danger");
+      return;
     }
 
     closeEventModal();
@@ -1104,6 +1070,7 @@
 
   async function saveLabel(payload) {
     if (!requireCalendarAuth()) return;
+    if (!requireScheduleWriteBackend()) return;
     if (!payload.name) {
       setNotice("Nama label wajib diisi.", "danger");
       return;
@@ -1118,31 +1085,25 @@
     });
 
     try {
-      const result = hasScheduleBackend()
-        ? await mutateScheduleJSON(
-            "/labels",
-            {
-              method: payload.id ? "PUT" : "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(nextLabel),
-            },
-            payload.id ? "Sedang memperbarui label..." : "Sedang menyimpan label..."
-          )
-        : await postRemoteJSON(
-            "upsertLabel",
-            nextLabel,
-            payload.id ? "Sedang memperbarui label..." : "Sedang menyimpan label..."
-          );
+      const result = await mutateScheduleJSON(
+        "/labels",
+        {
+          method: payload.id ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(nextLabel),
+        },
+        payload.id ? "Sedang memperbarui label..." : "Sedang menyimpan label..."
+      );
       const label = normalizeLabel(result?.label || nextLabel);
       state.labels = normalizeLabels(upsertArrayItem(state.labels, label, "id"));
       writeStore(STORAGE_KEYS.labels, state.labels);
       setNotice("Label berhasil disimpan.", "success");
-    } catch (_) {
-      state.labels = normalizeLabels(upsertArrayItem(state.labels, nextLabel, "id"));
-      writeStore(STORAGE_KEYS.labels, state.labels);
-      setNotice("Label disimpan lokal. Update Apps Script agar sinkron ke Sheets.", "warning");
+    } catch (error) {
+      setStatus("Gagal menyimpan label ke backend jadwal.");
+      setNotice(String(error?.message || error || "Gagal menyimpan label."), "danger");
+      return;
     }
 
     closeLabelModal();
@@ -1151,21 +1112,22 @@
 
   async function deleteLabel() {
     if (!requireCalendarAuth()) return;
+    if (!requireScheduleWriteBackend()) return;
     const id = state.editingLabelId;
     if (!id) return;
     if (!window.confirm("Hapus label ini?")) return;
 
     try {
-      if (hasScheduleBackend()) {
-        await mutateScheduleJSON(
-          `/labels?id=${encodeURIComponent(id)}`,
-          { method: "DELETE" },
-          "Sedang menghapus label..."
-        );
-      } else {
-        await postRemoteJSON("deleteLabel", { id }, "Sedang menghapus label...");
-      }
-    } catch (_) {}
+      await mutateScheduleJSON(
+        `/labels?id=${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+        "Sedang menghapus label..."
+      );
+    } catch (error) {
+      setStatus("Gagal menghapus label dari backend jadwal.");
+      setNotice(String(error?.message || error || "Gagal menghapus label."), "danger");
+      return;
+    }
 
     state.labels = state.labels.filter((item) => item.id !== id);
     writeStore(STORAGE_KEYS.labels, state.labels);
@@ -1180,6 +1142,7 @@
         : event
     );
     writeStore(STORAGE_KEYS.events, state.events);
+    setStatus("Label dihapus lewat backend jadwal.");
     setNotice("Label dihapus.", "success");
     closeLabelModal();
     renderAll();
