@@ -7,6 +7,8 @@
   const AUTH_TIMEOUT_MS = 12000;
   const AUTH_STATUS_MS = 3000;
   let googleScriptPromise = null;
+  let googleIdentityClientId = "";
+  let googleIdentityHandlers = {};
   let authStatusTimer = 0;
 
   function getConfig() {
@@ -365,6 +367,38 @@
     return googleScriptPromise;
   }
 
+  async function ensureGoogleIdentity(config) {
+    await loadGoogleScript();
+    if (!window.google?.accounts?.id) {
+      throw new Error("Google Sign-In belum tersedia.");
+    }
+
+    if (googleIdentityClientId === config.googleClientId) {
+      return window.google.accounts.id;
+    }
+
+    window.google.accounts.id.initialize({
+      client_id: config.googleClientId,
+      callback: async (response) => {
+        try {
+          const user = await loginWithGoogleCredential(response.credential);
+          if (typeof googleIdentityHandlers.onSuccess === "function") {
+            googleIdentityHandlers.onSuccess(user);
+          }
+        } catch (error) {
+          if (typeof googleIdentityHandlers.onError === "function") {
+            googleIdentityHandlers.onError(error);
+          }
+        }
+      },
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+
+    googleIdentityClientId = config.googleClientId;
+    return window.google.accounts.id;
+  }
+
   async function renderGoogleButton(container, handlers = {}) {
     const config = getConfig();
     if (!container) return false;
@@ -374,26 +408,10 @@
       return false;
     }
 
-    await loadGoogleScript();
-    if (!window.google?.accounts?.id) {
-      throw new Error("Google Sign-In belum tersedia.");
-    }
+    googleIdentityHandlers = handlers && typeof handlers === "object" ? handlers : {};
 
-    window.google.accounts.id.initialize({
-      client_id: config.googleClientId,
-      callback: async (response) => {
-        try {
-          const user = await loginWithGoogleCredential(response.credential);
-          if (typeof handlers.onSuccess === "function") handlers.onSuccess(user);
-        } catch (error) {
-          if (typeof handlers.onError === "function") handlers.onError(error);
-        }
-      },
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-
-    window.google.accounts.id.renderButton(container, {
+    const googleIdentity = await ensureGoogleIdentity(config);
+    googleIdentity.renderButton(container, {
       theme:
         document.documentElement.getAttribute("data-theme") === "dark"
           ? "filled_black"
