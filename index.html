@@ -174,34 +174,14 @@
       </div>
     </div>
   </div>
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand__main">
-        <div class="logo">
-          <img class="logo-mark" src="assets/icons/icon-192.png" alt="Logo TOGA" />
-        </div>
-        <div class="brand__copy">
-          <div class="title">TOGA RT 09</div>
-          <div class="subtitle">Kebun Obat Keluarga • RT 09 PKK</div>
-        </div>
-      </div>
-      <div class="brand__actions">
-        <details class="profile-menu">
-          <summary class="profile-menu__trigger" aria-label="Buka menu pengguna">
-            <svg class="profile-menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7" />
-              <path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
-            </svg>
-          </summary>
-          <div class="profile-menu__dropdown">
-            <a class="profile-menu__item" href="profile.html">Profile</a>
-            <a class="profile-menu__item" href="account.html" data-auth-account-link="true">Akun</a>
-            <a class="profile-menu__item" href="settings.html">Settings</a>
-          </div>
-        </details>
-      </div>
-    </div>
-  </header>
+  <div
+    data-topbar
+    data-topbar-variant="home"
+    data-topbar-title="TOGA RT 09"
+    data-topbar-subtitle="Kebun Obat Keluarga • RT 09 PKK"
+    data-topbar-logo-src="assets/icons/icon-192.png"
+    data-topbar-logo-alt="Logo TOGA"
+  ></div>
 
   <main class="container">
     <div id="dataSourceNotice" class="data-source-note hidden" role="status" aria-live="polite"></div>
@@ -375,6 +355,7 @@
 
   <script src="assets/js/config.js" defer></script>
   <script src="assets/js/theme.js" defer></script>
+  <script src="assets/js/topbar.js" defer></script>
   <script src="assets/js/auth.js" defer></script>
   <script src="assets/js/chat.js" defer></script>
   <script src="assets/js/pwa.js" defer></script>
