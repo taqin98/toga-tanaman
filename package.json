@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "qr:generate": "node scripts/generate-qr-only.mjs",
-    "check:js": "node --check assets/app.js && node --check assets/pwa.js && node --check assets/theme.js && node --check assets/ar.js && node --check sw.js",
+    "check:js": "node --check assets/js/app.js && node --check assets/js/ar.js && node --check assets/js/auth.js && node --check assets/js/chat.js && node --check assets/js/gallery.js && node --check assets/js/jadwal.js && node --check assets/js/pwa.js && node --check assets/js/ramuan.js && node --check assets/js/theme.js && node --check assets/js/topbar.js && node --check sw.js",
     "smoke": "node scripts/smoke.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",

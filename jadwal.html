@@ -48,39 +48,15 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="assets/jadwal.css" />
+    <link rel="stylesheet" href="assets/css/jadwal.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="top-wrap">
-        <div class="top-wrap__main">
-          <a class="back-btn" href="index.html" aria-label="Kembali ke Home">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="m15 6-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </a>
-          <div>
-            <h1 class="title">Jadwal</h1>
-            <p class="subtitle">Agenda dan kegiatan</p>
-          </div>
-        </div>
-        <div class="top-wrap__actions">
-          <details class="profile-menu">
-            <summary class="profile-menu__trigger" aria-label="Buka menu pengguna">
-              <svg class="profile-menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7" />
-                <path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
-              </svg>
-            </summary>
-            <div class="profile-menu__dropdown">
-              <a class="profile-menu__item" href="profile.html">Profile</a>
-              <a class="profile-menu__item" href="account.html" data-auth-account-link="true">Akun</a>
-              <a class="profile-menu__item" href="settings.html">Settings</a>
-            </div>
-          </details>
-        </div>
-      </div>
-    </header>
+    <div
+      data-topbar
+      data-topbar-title="Jadwal"
+      data-topbar-subtitle="Agenda dan kegiatan"
+      data-topbar-back-href="index.html"
+    ></div>
 
     <main class="container">
       <div class="jadwal-app" data-jadwal-app>
@@ -352,10 +328,11 @@
       </ul>
     </nav>
 
-    <script src="assets/config.js" defer></script>
-    <script src="assets/theme.js" defer></script>
-    <script src="assets/auth.js" defer></script>
-    <script src="assets/jadwal.js" defer></script>
-    <script src="assets/pwa.js" defer></script>
+    <script src="assets/js/config.js" defer></script>
+    <script src="assets/js/theme.js" defer></script>
+    <script src="assets/js/topbar.js" defer></script>
+    <script src="assets/js/auth.js" defer></script>
+    <script src="assets/js/jadwal.js" defer></script>
+    <script src="assets/js/pwa.js" defer></script>
   </body>
 </html>

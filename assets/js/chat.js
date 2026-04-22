@@ -917,7 +917,7 @@
         .join("\n\n");
     }
 
-    return "Mode lokal aktif. Isi `aiChatUrl` di assets/config.js agar chat memakai backend AI.";
+    return "Mode lokal aktif. Isi `aiChatUrl` di assets/js/config.js agar chat memakai backend AI.";
   }
 
   function getFriendlyBackendErrorMessage(error) {

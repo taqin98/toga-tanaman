@@ -21,10 +21,11 @@ const mustExist = [
   "ar.html",
   "offline.html",
   "sw.js",
-  "assets/app.js",
-  "assets/ar.js",
-  "assets/pwa.js",
-  "assets/theme.js",
+  "assets/js/app.js",
+  "assets/js/ar.js",
+  "assets/js/gallery.js",
+  "assets/js/pwa.js",
+  "assets/js/theme.js",
 ];
 
 mustExist.forEach((file) => {
@@ -34,16 +35,18 @@ mustExist.forEach((file) => {
 const indexHtml = read("index.html");
 const arHtml = read("ar.html");
 const swJs = read("sw.js");
-const appJs = read("assets/app.js");
-const pwaJs = read("assets/pwa.js");
+const appJs = read("assets/js/app.js");
+const galleryJs = read("assets/js/gallery.js");
+const pwaJs = read("assets/js/pwa.js");
 
 assert(indexHtml.includes('id="stateLoading"'), "Index punya state loading");
 assert(indexHtml.includes('id="stateError"'), "Index punya state error");
 assert(indexHtml.includes('id="stateList"'), "Index punya state list");
 assert(indexHtml.includes('id="stateDetail"'), "Index punya state detail");
 
-assert(arHtml.includes('src="assets/ar.js"'), "AR load script eksternal assets/ar.js");
+assert(arHtml.includes('src="assets/js/ar.js"'), "AR load script eksternal assets/js/ar.js");
 assert(!arHtml.includes("Samakan dengan pola app.js"), "Inline script AR sudah dipindah");
+assert(galleryJs.includes("function renderGallery"), "Logic render galeri ada di assets/js/gallery.js");
 
 assert(swJs.includes("./offline.html"), "SW punya offline fallback page");
 assert(swJs.includes("SKIP_WAITING"), "SW support update flow skip waiting");

@@ -538,7 +538,7 @@
       let backToHome = `<a href="index.html">Kembali ke halaman utama</a>`;
       googleHint.innerHTML = config.googleClientId
         ? `${labelHint}<br>${backToHome}`
-        : "Google Sign-In belum aktif. Isi googleClientId di assets/config.js.";
+        : "Google Sign-In belum aktif. Isi googleClientId di assets/js/config.js.";
     }
 
     if (!user && googleButton && config.googleClientId) {

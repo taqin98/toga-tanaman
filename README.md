@@ -83,16 +83,22 @@ Proyek ini mencakup:
 ├── scripts/
 │   └── generate-qr-only.mjs
 ├── assets/
-│   ├── app.js
-│   ├── ar.js
-│   ├── auth.js
-│   ├── jadwal.js
-│   ├── config.js
-│   ├── pwa.js
-│   ├── theme.js
-│   ├── style.css
-│   ├── account.css
-│   ├── jadwal.css
+│   ├── css/
+│   │   ├── account.css
+│   │   ├── jadwal.css
+│   │   └── style.css
+│   ├── js/
+│   │   ├── app.js
+│   │   ├── ar.js
+│   │   ├── auth.js
+│   │   ├── chat.js
+│   │   ├── config.js
+│   │   ├── gallery.js
+│   │   ├── jadwal.js
+│   │   ├── pwa.js
+│   │   ├── ramuan.js
+│   │   ├── theme.js
+│   │   └── topbar.js
 │   ├── icons/
 │   ├── screenshots/
 │   └── vendor/
@@ -146,7 +152,7 @@ Detail env dan endpoint backend ada di:
 ## Konfigurasi Frontend
 
 Konfigurasi utama ada di:
-- [assets/config.js](./assets/config.js)
+- [assets/js/config.js](./assets/js/config.js)
 
 Field penting:
 - `apiUrl`
@@ -341,7 +347,7 @@ Output:
 ## PWA
 - manifest: [manifest.webmanifest](./manifest.webmanifest)
 - service worker: [sw.js](./sw.js)
-- registrasi SW: [assets/pwa.js](./assets/pwa.js)
+- registrasi SW: [assets/js/pwa.js](./assets/js/pwa.js)
 
 Jika mengubah aset penting, naikkan versi cache di `sw.js`.
 

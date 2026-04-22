@@ -84,7 +84,7 @@ Membuka DevTools:
 - Windows (umum): `Ctrl + Shift + I`
 
 ## 4. Debug Service Worker dan Cache
-- Registrasi SW dilakukan oleh `assets/pwa.js`
+- Registrasi SW dilakukan oleh `assets/js/pwa.js`
 - File SW utama: `sw.js`
 - Versi cache saat ini: `toga-v9`
 
@@ -109,8 +109,8 @@ Langkah cek:
 ## 6. Referensi File
 - `index.html`
 - `ar.html`
-- `assets/app.js`
-- `assets/pwa.js`
+- `assets/js/app.js`
+- `assets/js/pwa.js`
 - `sw.js`
 - `manifest.webmanifest`
 - `data/plants.json`
