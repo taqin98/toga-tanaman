@@ -1,325 +1,286 @@
 # TOGA RT 09
 
 Sistem informasi **Tanaman Obat Keluarga (TOGA)** berbasis web untuk RT 09.
-Proyek ini menyediakan:
-- Halaman daftar dan detail tanaman (berbasis QR parameter `?id=`)
-- Mode Augmented Reality (AR) berbasis marker pattern
-- Dukungan Progressive Web App (PWA) + service worker untuk cache offline dasar
+
+Proyek ini mencakup:
+- katalog tanaman dan halaman detail berbasis `?id=`
+- galeri kegiatan
+- mode AR marker-based
+- kalender/jadwal kegiatan
+- halaman akun untuk login pengelola
+- PWA dasar dengan service worker
+
+## Ringkasan Arsitektur
+
+### Frontend
+- HTML, CSS, JavaScript vanilla
+- halaman utama: `index.html`
+- AR: `ar.html`
+- akun/login: `account.html`
+- jadwal: `jadwal.html`
+- pengaturan: `settings.html`
+
+### Sumber data baca
+- data tanaman dan galeri dibaca dari **Google Apps Script**
+- fallback baca:
+  - cache browser
+  - `data/plants.json` untuk tanaman
+
+### Jalur tulis terproteksi
+- login, session auth, dan write kalender berjalan lewat **backend Vercel** di folder `vercel-ai-backend/`
+- backend ini yang memanggil **Google Apps Script**
+- frontend **tidak lagi** menulis langsung ke Apps Script untuk:
+  - `createEvent`
+  - `updateEvent`
+  - `deleteEvent`
+  - `upsertLabel`
+  - `deleteLabel`
+
+### Logging login
+- login sukses dicatat di backend
+- backend juga mengirim log ke sheet `LoginLogs` di Google Sheets
+- `timestamp_login` disimpan dalam timezone `Asia/Jakarta` (`GMT+7`)
 
 ## Fitur Utama
-- Daftar tanaman dengan pencarian dan filter jenis
-- Halaman detail tanaman (manfaat, cara pakai, catatan)
-- Share link detail tanaman
-- Mode tampilan daftar: `Grid` dan `Compact`
-- Mode AR di `ar.html` menggunakan A-Frame + AR.js
-- Fallback data: API Google Apps Script -> cache localStorage -> `data/plants.json`
-- Service worker (`sw.js`) untuk precache aset statis
-
-## Teknologi yang Digunakan
-- HTML, CSS, JavaScript (vanilla)
-- A-Frame (`aframe.min.js`)
-- AR.js (`aframe-ar.js`)
-- Web App Manifest (`manifest.webmanifest`)
-- Service Worker (`sw.js`)
-
-## Troubleshooting
-- Panduan debug proyek: [DEBUGGING.md](./DEBUGGING.md)
+- daftar tanaman dengan pencarian dan filter
+- detail tanaman dengan share link
+- mode tampilan daftar `Grid` dan `Compact`
+- galeri kegiatan
+- AR dengan A-Frame + AR.js
+- login pengelola dengan:
+  - username/password
+  - Google Sign-In
+- kalender kegiatan dengan label warna
+- PWA + cache offline dasar
 
 ## Struktur Proyek
+
 ```txt
 .
-├── index.html                  # Halaman utama daftar + detail tanaman
-├── ar.html                     # Halaman AR marker-based
-├── gallery.html                # Halaman galeri kegiatan
-├── profile.html                # Halaman profil tim/pengelola
-├── marker-generator.html       # Generator marker pattern
-├── print-markers.html          # Cetak marker QR/pattern
-├── offline.html                # Fallback halaman saat offline
-├── manifest.webmanifest        # Konfigurasi PWA
-├── sw.js                       # Service worker + cache strategy
+├── index.html
+├── ar.html
+├── gallery.html
+├── account.html
+├── jadwal.html
+├── settings.html
+├── profile.html
+├── marker-generator.html
+├── print-markers.html
+├── offline.html
+├── manifest.webmanifest
+├── sw.js
 ├── README.md
 ├── DEBUGGING.md
-├── package.json
-├── eslint.config.js
-├── .prettierrc.json
-├── .prettierignore
+├── apps-script/
+│   └── calendar-api.gs
 ├── data/
-│   └── plants.json             # Data fallback lokal
+│   └── plants.json
+├── images/
 ├── markers/
-│   ├── *.patt                  # File marker AR per tanaman
-│   ├── qr/                     # Hasil QR marker per tanaman
+│   ├── *.patt
+│   ├── qr/
 │   └── note.md
-├── images/                     # Gambar tanaman lokal
 ├── scripts/
-│   └── generate-qr-only.mjs    # Script generate QR marker
-├── vercel-ai-backend/          # Backend serverless OpenRouter untuk deploy ke Vercel
-└── assets/
-    ├── ar.js                   # Logic AR (marker + UI state)
-    ├── app.js                  # Logic daftar/detail tanaman
-    ├── config.js               # Konfigurasi aplikasi
-    ├── pwa.js                  # Registrasi service worker
-    ├── theme.js                # Manajemen tema light/dark
-    ├── style.css               # Styling utama
-    ├── icons/
-    ├── screenshots/
-    └── vendor/
-        ├── arjs/
-        └── pdfMake/
+│   └── generate-qr-only.mjs
+├── assets/
+│   ├── app.js
+│   ├── ar.js
+│   ├── auth.js
+│   ├── jadwal.js
+│   ├── config.js
+│   ├── pwa.js
+│   ├── theme.js
+│   ├── style.css
+│   ├── account.css
+│   ├── jadwal.css
+│   ├── icons/
+│   ├── screenshots/
+│   └── vendor/
+└── vercel-ai-backend/
+    ├── api/
+    ├── package.json
+    ├── vercel.json
+    ├── .env.example
+    └── README.md
 ```
 
-## Cara Menjalankan (XAMPP)
-1. Pastikan folder proyek berada di:
+## Menjalankan Lokal
+
+### Frontend dengan XAMPP
+1. Simpan proyek di:
    - `/Applications/XAMPP/xamppfiles/htdocs/toga-tanaman`
 2. Jalankan Apache dari XAMPP.
-3. Buka browser:
+3. Buka:
    - `http://localhost/toga-tanaman/`
 
-## Backend AI Vercel
-Jika ingin menambahkan chat AI tanpa mengekspos API key di browser, gunakan folder:
-- `vercel-ai-backend/`
+### Backend Vercel lokal
+1. Masuk ke folder backend:
+```bash
+cd vercel-ai-backend
+```
+2. Siapkan env:
+```bash
+cp .env.example .env
+```
+3. Install dependency:
+```bash
+npm install
+```
+4. Jalankan check syntax:
+```bash
+npm run check
+```
+5. Jalankan via tooling Vercel/dev workflow yang Anda pakai.
 
-Folder ini berisi template backend serverless OpenRouter untuk Vercel:
-- `api/chat.js`
-- `package.json`
-- `vercel.json`
-- `.env.example`
-
-Lihat panduan deploy dan contoh request di:
-- `vercel-ai-backend/README.md`
+Detail env dan endpoint backend ada di:
+- [vercel-ai-backend/README.md](./vercel-ai-backend/README.md)
 
 ## URL Penting
-- Daftar tanaman: `http://localhost/toga-tanaman/`
-- Detail tanaman by id: `http://localhost/toga-tanaman/?id=kunyit`
-- Mode AR: `http://localhost/toga-tanaman/ar.html`
-- Mode AR + debug: `http://localhost/toga-tanaman/ar.html?debug=1`
-- Generator marker lokal: `http://localhost/toga-tanaman/marker-generator.html`
+- home: `http://localhost/toga-tanaman/`
+- detail tanaman: `http://localhost/toga-tanaman/?id=kunyit`
+- AR: `http://localhost/toga-tanaman/ar.html`
+- AR debug: `http://localhost/toga-tanaman/ar.html?debug=1`
+- akun: `http://localhost/toga-tanaman/account.html`
+- jadwal: `http://localhost/toga-tanaman/jadwal.html`
 
-## Konfigurasi Data
-Sumber data utama saat ini memakai endpoint Google Apps Script (di `assets/app.js` dan script di `ar.html`):
-- `API_URL?mode=list` untuk daftar tanaman
-- `API_URL?id=<id>` untuk detail tanaman
+## Konfigurasi Frontend
 
-Jika API tidak tersedia, aplikasi akan fallback ke data lokal:
-- `data/plants.json`
+Konfigurasi utama ada di:
+- [assets/config.js](./assets/config.js)
 
-Catatan: isi `data/plants.json` saat ini masih kosong (`[]`), jadi untuk mode offline sebaiknya diisi data tanaman.
+Field penting:
+- `apiUrl`
+  URL Google Apps Script untuk data tanaman/galeri
+- `authApiUrl`
+  endpoint backend auth
+- `scheduleApiUrl`
+  endpoint backend schedule
+- `googleClientId`
+  client ID Google Sign-In frontend
 
-## Google Apps Script API
-Proyek ini menggunakan Google Apps Script sebagai JSON API dari Google Sheets.
+## Google Apps Script
 
-### 1. Struktur Spreadsheet
-- Spreadsheet URL: `https://docs.google.com/spreadsheets/d/17BjGxtalow56mIflBtT_DihH1jJQo96r5Uur1ozZF9E/edit?usp=sharing`
-- Spreadsheet ID: `17BjGxtalow56mIflBtT_DihH1jJQo96r5Uur1ozZF9E`
-- Sheet name: `Plants`
-- Susunan kolom:
-  - `id,nama,nama_latin,jenis,gambar,manfaat,deskripsi,catatan,url_qr,gr_img`
+Apps Script utama ada di:
+- [apps-script/calendar-api.gs](./apps-script/calendar-api.gs)
 
-Kolom yang dibaca API utama:
-- `id,nama,nama_latin,jenis,gambar,manfaat,deskripsi,catatan`
+Fungsi Apps Script saat ini:
+- baca data tanaman
+- baca galeri
+- baca event kalender
+- baca label kalender
+- simpan event/label dari backend
+- simpan log login ke sheet `LoginLogs`
 
-Kolom tambahan spreadsheet:
-- `url_qr`
-- `gr_img`
+Sheet yang dipakai:
+- `Plants`
+- `Galleries`
+- `Events`
+- `EventLabels`
+- `LoginLogs`
 
-Untuk data galeri, tambahkan sheet baru:
-- Sheet name: `Galleries`
-- Kolom:
-  - `id,title,image,date,location,person,desc`
+### Keamanan Apps Script
 
-Contoh isi row `Galleries`:
-- `gal-001,Kerja Bakti TOGA,https://images.unsplash.com/... ,2026-02-10,Kebun RT 09,Ibu PKK,Perawatan rutin area tanam TOGA`
+Action POST berikut sekarang dilindungi secret:
+- `createEvent`
+- `updateEvent`
+- `deleteEvent`
+- `upsertLabel`
+- `deleteLabel`
+- `appendLoginLog`
 
-Format kolom list (`manfaat`, `catatan`) dapat diisi:
-- Satu nilai saja, atau
-- Banyak nilai dipisah karakter `|` (pipe), contoh: `A|B|C`
+Apps Script memeriksa `APPS_SCRIPT_SHARED_SECRET` dari **Script Properties**.
 
-Kolom `deskripsi` diisi teks paragraf (HTML mentah), contoh:
-```html
-<p>Kunyit dikenal sebagai rempah dengan banyak manfaat.</p>
-<p>Gunakan seperlunya sesuai kebutuhan.</p>
+Set di Apps Script:
+1. buka `Project Settings`
+2. masuk ke `Script Properties`
+3. tambah:
+```text
+APPS_SCRIPT_SHARED_SECRET=<secret-yang-sama-dengan-backend>
 ```
 
-Formula spreadsheet:
-- `url_qr` (contoh di baris 2):
-```excel
-="https://taqin98.github.io/toga-tanaman/?id="&A2
-```
-- `gr_img` / QR image (contoh di baris 2):
-```excel
-=IMAGE("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data="&ENCODEURL(I2))
-```
+Setelah mengubah Apps Script:
+1. update kode
+2. redeploy Web App
 
-### 2. Kode Google Apps Script
-Gunakan kode yang Anda pakai saat ini (disarankan simpan sebagai `Code.gs`):
+## Backend Auth dan Schedule
 
-```javascript
-/**
- * TOGA RT09 - JSON API dari Google Sheets
- * Sheet name: Plants
- * Kolom wajib: id,nama,nama_latin,jenis,gambar,manfaat,deskripsi,catatan
- */
+Backend Vercel menangani:
+- login username/password
+- login Google
+- session token
+- proteksi write kalender
+- forwarding write ke Apps Script
+- forwarding login log ke Apps Script
 
-const SPREADSHEET_ID = "17BjGxtalow56mIflBtT_DihH1jJQo96r5Uur1ozZF9E";
-const SHEET_NAME = "Plants";
+Env penting di backend:
+- `AUTH_JWT_SECRET`
+- `AUTH_USERS_JSON`
+- `GOOGLE_CLIENT_ID`
+- `AUTH_ALLOWED_GOOGLE_EMAILS`
+- `APPS_SCRIPT_API_URL`
+- `APPS_SCRIPT_SHARED_SECRET`
 
-function doOptions(e){
-  return jsonCORS_({ ok: true });
-}
+Contoh detail konfigurasi ada di:
+- [vercel-ai-backend/.env.example](./vercel-ai-backend/.env.example)
 
-function doGet(e) {
-  const params = (e && e.parameter) ? e.parameter : {};
-  const callback = (params.callback || "").trim();
+## AUTH_ALLOWED_GOOGLE_EMAILS
 
-  const id = (params.id || "").trim();
-  const mode = (params.mode || "").trim();
+Format:
 
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) return output_(callback, { error: `Sheet "${SHEET_NAME}" tidak ditemukan.` });
-
-  const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return output_(callback, { error: "Data kosong." });
-
-  const headers = values[0].map(h => String(h).trim());
-  const rows = values.slice(1);
-
-  const data = rows.map(r => rowToObj_(headers, r)).filter(o => o.id);
-
-  if (id) {
-    const found = data.find(x => String(x.id).trim() === id);
-    if (!found) return output_(callback, { error: "Tanaman tidak ditemukan", id });
-    return output_(callback, normalizePlant_(found));
-  }
-
-  if (mode === "list") {
-    return output_(callback, data.map(d => ({
-      id: String(d.id).trim(),
-      nama: d.nama || "",
-      nama_latin: d.nama_latin || "",
-      jenis: d.jenis || "",
-      gambar: d.gambar || ""
-    })));
-  }
-
-  if (mode === "gallery") {
-    return output_(callback, getGallery_(ss));
-  }
-
-
-  const out = {};
-  data.forEach(d => out[String(d.id).trim()] = normalizePlant_(d));
-  return output_(callback, out);
-}
-
-function output_(callback, obj) {
-  const json = JSON.stringify(obj);
-
-  // JSONP mode
-  if (callback) {
-    return ContentService
-      .createTextOutput(`${callback}(${json})`)
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-
-  // Normal JSON mode (kalau dibuka langsung di browser)
-  return ContentService
-    .createTextOutput(json)
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function getGallery_(ss) {
-  const gallerySheet = ss.getSheetByName("Galleries");
-  if (!gallerySheet) return [];
-
-  const values = gallerySheet.getDataRange().getValues();
-  if (values.length < 2) return [];
-
-  const headers = values[0].map(h => String(h).trim());
-  const rows = values.slice(1);
-
-  return rows
-    .map(r => rowToObj_(headers, r))
-    .filter(o => String(o.image || "").trim())
-    .map((o, i) => ({
-      id: String(o.id || `gallery-${i + 1}`).trim(),
-      title: String(o.title || "").trim(),
-      image: String(o.image || "").trim(),
-      date: String(o.date || "").trim(),
-      location: String(o.location || "").trim(),
-      person: String(o.person || "").trim(),
-      desc: String(o.desc || "").trim()
-    }));
-}
-
-function rowToObj_(headers, row) {
-  const o = {};
-  headers.forEach((h, i) => o[h] = row[i] !== undefined ? row[i] : "");
-  Object.keys(o).forEach(k => {
-    if (typeof o[k] === "string") o[k] = o[k].trim();
-  });
-  return o;
-}
-
-function splitPipe_(v) {
-  if (v === null || v === undefined) return [];
-  const s = String(v).trim();
-  if (!s) return [];
-  return s.includes("|") ? s.split("|").map(x => x.trim()).filter(Boolean) : [s];
-}
-
-function normalizePlant_(p) {
-  return {
-    id: String(p.id || "").trim(),
-    nama: p.nama || "",
-    nama_latin: p.nama_latin || "",
-    jenis: p.jenis || "",
-    gambar: p.gambar || "",
-    manfaat: splitPipe_(p.manfaat),
-    deskripsi: p.deskripsi || "",
-    catatan: splitPipe_(p.catatan)
-  };
-}
-
-function jsonCORS_(obj) {
-  const payload = JSON.stringify(obj);
-  const out = HtmlService.createHtmlOutput(payload);
-  out.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  out.setHeader("Access-Control-Allow-Origin", "*");
-  out.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  out.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  return out;
-}
+```env
+AUTH_ALLOWED_GOOGLE_EMAILS=admin@gmail.com,editor@domain.com
 ```
 
-### 3. Deploy sebagai Web App
-1. Buka `script.google.com`, buat project Apps Script.
-2. Tempel kode di atas pada `Code.gs`.
-3. Klik `Deploy` -> `New deployment`.
-4. Pilih type `Web app`.
-5. Set:
-   - Execute as: `Me`
-   - Who has access: `Anyone`
-6. Klik `Deploy`, lalu salin URL Web App (`.../exec`).
+Perilaku:
+- jika diisi, hanya email tersebut yang boleh login via Google
+- jika kosong, semua akun Google valid dengan `aud` yang cocok akan diterima
 
-### 4. Endpoint yang Digunakan Frontend
-- List ringkas tanaman:
-  - `GET <WEB_APP_URL>/exec?mode=list`
-- Detail tanaman per id:
-  - `GET <WEB_APP_URL>/exec?id=kunyit`
-- Semua data normalisasi (objek by id):
-  - `GET <WEB_APP_URL>/exec`
-- List galeri:
-  - `GET <WEB_APP_URL>/exec?mode=gallery`
+## Logging Login ke Sheet
 
-### 5. Integrasi ke Proyek
-Ganti nilai `API_URL` di:
-- `assets/app.js`
-- script inline pada `ar.html`
+Sheet target:
+- `LoginLogs`
 
-Pastikan nilai `API_URL` menunjuk ke URL Web App terbaru (deployment aktif).
+Kolom yang ditulis:
+- `timestamp_login`
+- `display_name`
+- `email`
+- `username`
+- `provider`
+- `role`
+- `ip`
+- `user_agent`
+- `user_id`
 
-## Format Data Tanaman
+Catatan:
+- log ditulis oleh backend, bukan frontend
+- backend juga tetap menulis runtime log
+- jika Apps Script gagal menerima log, login tetap berhasil tetapi backend akan menulis warning
+
+## Kalender/Jadwal
+
+Halaman kalender:
+- [jadwal.html](./jadwal.html)
+
+Aturan saat ini:
+- mode baca masih bisa mengambil data dari Apps Script/backend
+- aksi tulis kalender hanya lewat backend `/api/schedule/*`
+- fallback tulis langsung dari frontend ke Apps Script sudah dimatikan
+- jika backend schedule belum aktif, UI akan menolak aksi simpan/ubah/hapus
+
+## Data Tanaman
+
+Endpoint baca yang dipakai frontend:
+- `GET <APPS_SCRIPT_URL>?mode=list`
+- `GET <APPS_SCRIPT_URL>?id=<id>`
+- `GET <APPS_SCRIPT_URL>`
+- `GET <APPS_SCRIPT_URL>?mode=gallery`
+
+Jika API baca tidak tersedia:
+- frontend fallback ke cache
+- tanaman bisa fallback ke `data/plants.json`
+
 Contoh objek tanaman:
+
 ```json
 {
   "id": "kunyit",
@@ -334,56 +295,37 @@ Contoh objek tanaman:
 ```
 
 ## Menambah Tanaman Baru
-1. Tambahkan data tanaman (ID unik) ke sumber data utama (API) dan/atau `data/plants.json`.
-2. Tambahkan gambar ke `images/` lalu isi field `gambar`.
-3. Buat marker pattern dengan nama:
+1. Tambahkan data ke sheet/API utama.
+2. Tambahkan gambar ke `images/` jika memakai aset lokal.
+3. Buat marker pattern:
    - `markers/<id>.patt`
-4. Uji akses:
+4. Uji:
    - `/?id=<id>`
-   - `/ar.html` lalu scan marker.
+   - `/ar.html`
 
-## Dokumentasi AR Marker (Generator AR.js)
-Marker AR pada proyek ini dibuat dari generator resmi AR.js:
+## AR Marker
+
+Marker AR dibuat dari generator AR.js:
 - `https://ar-js-org.github.io/AR.js/three.js/examples/marker-training/examples/generator.html`
 
-### Alur Generate Marker
-1. Siapkan gambar marker (PNG/JPG) dengan kontras tinggi.
-2. Buka link generator AR.js di atas.
-3. Upload gambar marker.
-4. Download file pattern `.patt` (wajib untuk tracking AR.js).
-5. (Opsional) download gambar marker hasil generate untuk dicetak sebagai target scan.
+Aturan penamaan:
+- file pattern harus disimpan sebagai `markers/<id>.patt`
+- `<id>` harus sama dengan `id` data tanaman
 
-### Aturan Penamaan di Proyek Ini
-File marker harus disimpan di folder `markers/` dengan format:
-- `markers/<id>.patt`
+Mode uji:
+- normal: `/ar.html`
+- debug: `/ar.html?debug=1`
 
-Contoh:
-- ID tanaman `kunyit` -> `markers/kunyit.patt`
-- ID tanaman `kangkung` -> `markers/kangkung.patt`
+## Generate QR
 
-`<id>` harus sama persis dengan kolom `id` di data tanaman/API, karena `ar.html` memuat marker dengan pola:
-- `markers/${id}.patt`
-
-### Cara Uji Marker
-1. Buka `http://localhost/toga-tanaman/ar.html`.
-2. Arahkan kamera ke marker yang sudah dicetak/ditampilkan.
-3. Jika terdeteksi, overlay AR tampil dan tombol detail tanaman muncul.
-4. Untuk simulasi tanpa scan kamera, gunakan mode debug:
-   - `http://localhost/toga-tanaman/ar.html?debug=1`
-
-### Catatan Penting
-- Jangan ubah nama file marker setelah mapping ID dipakai di data.
-- Pastikan pencahayaan cukup saat scanning.
-- Gunakan marker yang dicetak tajam dan tidak blur untuk akurasi deteksi.
-
-## Generate QR Code Otomatis (Tanpa .patt)
-Jika ingin generate PNG QR saja dari data Apps Script:
+Generate QR PNG dari data Apps Script:
 
 ```bash
 npm run qr:generate
 ```
 
-Opsi tambahan:
+Contoh dengan opsi:
+
 ```bash
 npm run qr:generate -- \
   --api-url "https://<WEB_APP_URL>/exec" \
@@ -396,13 +338,15 @@ Output:
 - `markers/qr/<id>.png`
 - `markers/qr/report.json`
 
-## Catatan PWA
-- Manifest: `manifest.webmanifest`
-- Registrasi SW: `assets/pwa.js`
-- Precache aset statis: `sw.js`
-- Versi cache saat ini: `toga-v9`
+## PWA
+- manifest: [manifest.webmanifest](./manifest.webmanifest)
+- service worker: [sw.js](./sw.js)
+- registrasi SW: [assets/pwa.js](./assets/pwa.js)
 
-Jika mengubah aset penting, naikkan versi cache di `sw.js` agar cache lama dibersihkan.
+Jika mengubah aset penting, naikkan versi cache di `sw.js`.
+
+## Troubleshooting
+- panduan debug: [DEBUGGING.md](./DEBUGGING.md)
 
 ## Lisensi
-Belum ditentukan. Tambahkan lisensi sesuai kebutuhan proyek.
+Belum ditentukan.
