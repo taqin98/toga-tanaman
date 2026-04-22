@@ -434,6 +434,15 @@
       if (element.dataset.allowWhilePending === "true") return;
       element.disabled = isPending;
     });
+
+    const submitButton = root.querySelector("[data-auth-submit]");
+    const submitLabel = root.querySelector("[data-auth-submit-label]");
+    if (submitButton) {
+      submitButton.setAttribute("data-loading", isPending ? "true" : "false");
+    }
+    if (submitLabel) {
+      submitLabel.textContent = isPending ? "Memproses..." : "Login";
+    }
   }
 
   function clearAuthStatus() {
@@ -525,8 +534,10 @@
     }
 
     if (googleHint) {
-      googleHint.textContent = config.googleClientId
-        ? "Masuk dengan akun Google yang diizinkan."
+      let labelHint = "Masuk dengan akun Google yang diizinkan.";
+      let backToHome = `<a href="index.html">Kembali ke halaman utama</a>`;
+      googleHint.innerHTML = config.googleClientId
+        ? `${labelHint}<br>${backToHome}`
         : "Google Sign-In belum aktif. Isi googleClientId di assets/config.js.";
     }
 
@@ -567,16 +578,39 @@
     const root = document.querySelector("[data-auth-page]");
     if (!root) return;
 
+    root.querySelector("[data-auth-password-toggle]")?.addEventListener("click", (event) => {
+      const button = event.currentTarget;
+      const passwordInput = root.querySelector("#authPassword");
+      if (!button || !passwordInput) return;
+
+      const nextVisible = passwordInput.type === "password";
+      passwordInput.type = nextVisible ? "text" : "password";
+      button.setAttribute("aria-pressed", nextVisible ? "true" : "false");
+      button.setAttribute(
+        "aria-label",
+        nextVisible ? "Sembunyikan password" : "Tampilkan password"
+      );
+    });
+
     root.querySelector("[data-auth-login-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
       const username = form.querySelector("[name='username']")?.value || "";
       const password = form.querySelector("[name='password']")?.value || "";
+      const passwordInput = form.querySelector("#authPassword");
+      const passwordToggle = root.querySelector("[data-auth-password-toggle]");
 
       setPendingState(root, true);
       try {
         await loginWithPassword(username, password);
         form.reset();
+        if (passwordInput) {
+          passwordInput.type = "password";
+        }
+        if (passwordToggle) {
+          passwordToggle.setAttribute("aria-pressed", "false");
+          passwordToggle.setAttribute("aria-label", "Tampilkan password");
+        }
         handlePostLogin();
       } catch (error) {
         showAuthError(String(error?.message || error));
