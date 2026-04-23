@@ -6,6 +6,8 @@
   const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
   const AUTH_TIMEOUT_MS = 12000;
   const AUTH_STATUS_MS = 3000;
+  const AUTH_BACKEND_UNAVAILABLE_MESSAGE =
+    "Backend auth belum dikonfigurasi. Login dinonaktifkan sampai authApiUrl atau aiChatUrl backend tersedia.";
   let googleScriptPromise = null;
   let googleIdentityClientId = "";
   let googleIdentityHandlers = {};
@@ -14,7 +16,6 @@
   function getConfig() {
     const config = window.TOGA_CONFIG || {};
     return {
-      authUsers: Array.isArray(config.authUsers) ? config.authUsers : [],
       googleClientId: String(config.googleClientId || "").trim(),
       allowedGoogleEmails: Array.isArray(config.allowedGoogleEmails)
         ? config.allowedGoogleEmails
@@ -74,6 +75,13 @@
 
   function readUser() {
     try {
+      const token = readToken();
+      if (!token) {
+        localStorage.removeItem(STORAGE_USER_KEY);
+        localStorage.removeItem(LEGACY_USER_KEY);
+        return null;
+      }
+
       const nextRaw = localStorage.getItem(STORAGE_USER_KEY);
       if (nextRaw) {
         return normalizeUser(JSON.parse(nextRaw));
@@ -126,86 +134,8 @@
     window.dispatchEvent(new CustomEvent(AUTH_EVENT, { detail: { user } }));
   }
 
-  function getAuthUsers() {
-    return getConfig().authUsers
-      .map((item) => (item && typeof item === "object" ? item : null))
-      .filter(Boolean);
-  }
-
-  function loginWithPasswordFallback(username, password) {
-    const cleanUsername = String(username || "").trim().toLowerCase();
-    const cleanPassword = String(password || "");
-    const matched = getAuthUsers().find((user) => {
-      return (
-        String(user.username || "").trim().toLowerCase() === cleanUsername &&
-        String(user.password || "") === cleanPassword
-      );
-    });
-
-    if (!matched) {
-      throw new Error("Username atau password tidak cocok.");
-    }
-
-    return writeSession({
-      token: "",
-      user: {
-        id: matched.username,
-        username: matched.username,
-        displayName: matched.displayName || matched.name || matched.username,
-        role: matched.role || "editor",
-        provider: "password",
-        loginAt: Date.now(),
-      },
-    });
-  }
-
-  function decodeJwtPayload(token) {
-    const part = String(token || "").split(".")[1] || "";
-    if (!part) return null;
-    const padded = part.replace(/-/g, "+").replace(/_/g, "/");
-    const json = decodeURIComponent(
-      atob(padded)
-        .split("")
-        .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
-        .join("")
-    );
-    return JSON.parse(json);
-  }
-
-  function loginWithGoogleFallback(credential) {
-    const payload = decodeJwtPayload(credential);
-    const config = getConfig();
-    if (!payload || !payload.email) {
-      throw new Error("Token Google tidak valid.");
-    }
-    if (!payload.email_verified) {
-      throw new Error("Akun Google belum terverifikasi.");
-    }
-
-    const allowedEmails = config.allowedGoogleEmails.map((item) =>
-      String(item || "").trim().toLowerCase()
-    );
-    const email = String(payload.email || "").trim().toLowerCase();
-    if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
-      throw new Error("Akun Google ini belum diizinkan untuk mengelola jadwal.");
-    }
-
-    return writeSession({
-      token: "",
-      user: {
-        id: payload.sub || email,
-        email,
-        displayName: payload.name || payload.given_name || payload.email,
-        avatar: payload.picture || "",
-        role: "editor",
-        provider: "google",
-        loginAt: Date.now(),
-      },
-    });
-  }
-
   function isAuthenticated() {
-    return !!readUser();
+    return !!readToken() && !!readUser();
   }
 
   function getLoginUrl() {
@@ -268,7 +198,7 @@
 
   async function loginWithPassword(username, password) {
     if (!hasAuthBackend()) {
-      return loginWithPasswordFallback(username, password);
+      throw new Error(AUTH_BACKEND_UNAVAILABLE_MESSAGE);
     }
 
     const data = await requestAuth("/login", {
@@ -287,7 +217,7 @@
 
   async function loginWithGoogleCredential(credential) {
     if (!hasAuthBackend()) {
-      return loginWithGoogleFallback(credential);
+      throw new Error(AUTH_BACKEND_UNAVAILABLE_MESSAGE);
     }
 
     const data = await requestAuth("/google", {
@@ -305,9 +235,8 @@
 
   async function refreshSession() {
     if (!hasAuthBackend()) {
-      const user = readUser();
-      dispatchAuthChange(user);
-      return user;
+      clearSession();
+      return null;
     }
 
     const token = readToken();
@@ -495,11 +424,21 @@
     }, duration);
   }
 
+  function setGuestAuthEnabled(root, enabled) {
+    const guestSection = root?.querySelector("[data-auth-guest]");
+    if (!guestSection) return;
+
+    guestSection.querySelectorAll("input, button").forEach((element) => {
+      element.disabled = !enabled;
+    });
+  }
+
   function syncAuthPage() {
     const root = document.querySelector("[data-auth-page]");
     if (!root) return;
 
     const user = readUser();
+    const authBackendReady = hasAuthBackend();
     const titleEl = root.querySelector("[data-auth-title]");
     const descEl = root.querySelector("[data-auth-desc]");
     const guestSection = root.querySelector("[data-auth-guest]");
@@ -523,7 +462,9 @@
     if (descEl) {
       descEl.textContent = user
         ? "Anda sudah login dan bisa mengelola jadwal, label warna, dan perubahan agenda."
-        : "Login untuk mengelola jadwal, label warna, dan perubahan agenda.";
+        : authBackendReady
+          ? "Login untuk mengelola jadwal, label warna, dan perubahan agenda."
+          : "Login dinonaktifkan sampai backend auth tersedia.";
     }
 
     if (nameEl) {
@@ -554,18 +495,22 @@
     }
 
     if (googleWrap) {
-      googleWrap.hidden = !!user;
+      googleWrap.hidden = !!user || !authBackendReady;
     }
 
     if (googleHint) {
       let labelHint = "Masuk dengan akun Google yang diizinkan.";
       let backToHome = `<a href="index.html">Kembali ke halaman utama</a>`;
-      googleHint.innerHTML = config.googleClientId
-        ? `${labelHint}<br>${backToHome}`
-        : "Google Sign-In belum aktif. Isi googleClientId di assets/js/config.js.";
+      googleHint.innerHTML = !authBackendReady
+        ? `${AUTH_BACKEND_UNAVAILABLE_MESSAGE}<br>${backToHome}`
+        : config.googleClientId
+          ? `${labelHint}<br>${backToHome}`
+          : "Google Sign-In belum aktif. Isi googleClientId di assets/js/config.js.";
     }
 
-    if (!user && googleButton && config.googleClientId) {
+    setGuestAuthEnabled(root, !user && authBackendReady);
+
+    if (!user && googleButton && authBackendReady && config.googleClientId) {
       renderGoogleButton(googleButton, {
         onSuccess: () => handlePostLogin(),
         onError: (error) => showAuthError(String(error?.message || error)),
@@ -674,6 +619,12 @@
 
   function init() {
     injectAccountMenu();
+    if (!hasAuthBackend()) {
+      clearSession();
+      bindAuthPage();
+      return;
+    }
+
     dispatchAuthChange(readUser());
     bindAuthPage();
     refreshSession().then(syncAuthPage).catch(() => {});
@@ -682,6 +633,11 @@
   window.addEventListener("DOMContentLoaded", init);
   window.addEventListener("storage", (event) => {
     if (event.key !== STORAGE_USER_KEY && event.key !== STORAGE_TOKEN_KEY) return;
+    if (!hasAuthBackend()) {
+      clearSession();
+      syncAuthPage();
+      return;
+    }
     dispatchAuthChange(readUser());
     syncAuthPage();
   });

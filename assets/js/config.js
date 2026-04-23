@@ -18,16 +18,6 @@ window.TOGA_CONFIG = Object.assign(
     // Opsional: endpoint proxy jadwal backend.
     // Jika kosong, frontend akan menurunkan dari authApiUrl/aiChatUrl -> /api/schedule
     scheduleApiUrl: "https://vercel-ai-backend-ten.vercel.app/api/schedule",
-    // Auth frontend untuk izin CRUD jadwal.
-    // Hanya dipakai fallback jika auth backend belum diaktifkan.
-    authUsers: [
-      {
-        username: "userDummy",
-        password: "passwordDummy",
-        displayName: "Display Dummy",
-        role: "editor",
-      },
-    ],
     // Opsional: aktifkan Google Sign-In dengan Web Client ID dari Google Cloud Console.
     googleClientId: "48850536137-p383qe88mv03p23mb8e5j6mr84jg3tvj.apps.googleusercontent.com",
     // Opsional: jika diisi, hanya email ini yang boleh login via Google.
