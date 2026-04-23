@@ -11,6 +11,8 @@
   const CACHE_KEY_GALLERY = "toga:gallery:list:v1";
   const PAGE_SIZE = 9;
   const SKELETON_COUNT = 9;
+  const SUPPORTS_INTERSECTION_OBSERVER = "IntersectionObserver" in window;
+  const MIN_SPINNER_MS = 240;
 
   const kegiatan = [
     "Edukasi",
@@ -26,7 +28,10 @@
   const gridEl = document.getElementById("galleryGrid");
   const modalEl = document.getElementById("previewModal");
   const closeEl = document.getElementById("previewClose");
+  const loadMoreTrigger = document.getElementById("loadMoreTrigger");
+  const loadMoreActions = document.getElementById("loadMoreActions");
   const loadMoreBtn = document.getElementById("loadMoreBtn");
+  const loadMoreDone = document.getElementById("loadMoreDone");
   const previewImgEl = document.getElementById("previewImg");
   const previewTitleEl = document.getElementById("previewTitle");
   const previewMetaEl = document.getElementById("previewMeta");
@@ -36,7 +41,10 @@
     !gridEl ||
     !modalEl ||
     !closeEl ||
+    !loadMoreTrigger ||
+    !loadMoreActions ||
     !loadMoreBtn ||
+    !loadMoreDone ||
     !previewImgEl ||
     !previewTitleEl ||
     !previewMetaEl ||
@@ -47,6 +55,10 @@
 
   let allItems = [];
   let visibleCount = 0;
+  let lastRenderedCount = 0;
+  let galleryIntersectionObserver = null;
+  let isLoadingMore = false;
+  let loadingStartedAt = 0;
 
   function setSourceText(value) {
     const sourceEl = document.getElementById("gallerySourceText");
@@ -360,9 +372,16 @@
     updateGalleryContext("list");
   }
 
-  function renderGallery(items) {
-    gridEl.innerHTML = "";
-    items.forEach((item) => {
+  function renderGallery(items, mode = "reset") {
+    const hasMore = visibleCount < allItems.length;
+
+    if (mode === "reset") {
+      gridEl.innerHTML = "";
+      lastRenderedCount = 0;
+    }
+
+    items.forEach((item, index) => {
+      if (index < lastRenderedCount) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "gallery-item";
@@ -378,6 +397,23 @@
       button.addEventListener("click", () => openPreview(item));
       gridEl.appendChild(button);
     });
+
+    lastRenderedCount = items.length;
+    loadMoreTrigger.classList.toggle(
+      "hidden",
+      !SUPPORTS_INTERSECTION_OBSERVER || !hasMore || allItems.length === 0
+    );
+    loadMoreActions.classList.toggle("hidden", allItems.length === 0);
+    loadMoreBtn.classList.toggle("hidden", !hasMore);
+    loadMoreDone.classList.toggle("hidden", hasMore || allItems.length === 0);
+
+    if (galleryIntersectionObserver) {
+      if (!hasMore || allItems.length === 0) {
+        galleryIntersectionObserver.disconnect();
+      } else if (SUPPORTS_INTERSECTION_OBSERVER) {
+        galleryIntersectionObserver.observe(loadMoreTrigger);
+      }
+    }
   }
 
   function renderGallerySkeleton(count = SKELETON_COUNT) {
@@ -390,16 +426,58 @@
     }
   }
 
-  function updateLoadMoreButton() {
-    const hasMore = visibleCount < allItems.length;
-    loadMoreBtn.classList.toggle("hidden", !hasMore);
+  function loadMoreItems() {
+    if (visibleCount >= allItems.length) return;
+    if (isLoadingMore) return;
+
+    isLoadingMore = true;
+    loadingStartedAt = Date.now();
+    loadMoreTrigger.classList.add("is-loading");
+    loadMoreBtn.disabled = true;
+
+    visibleCount = Math.min(visibleCount + PAGE_SIZE, allItems.length);
+
+    const finishLoad = () => {
+      renderGallery(allItems.slice(0, visibleCount), "append");
+      loadMoreTrigger.classList.remove("is-loading");
+      loadMoreBtn.disabled = false;
+      isLoadingMore = false;
+      updateGalleryContext("list");
+    };
+
+    requestAnimationFrame(() => {
+      const elapsed = Date.now() - loadingStartedAt;
+      const delay = Math.max(MIN_SPINNER_MS - elapsed, 0);
+      setTimeout(finishLoad, delay);
+    });
   }
 
-  function renderNextPage() {
-    visibleCount = Math.min(visibleCount + PAGE_SIZE, allItems.length);
-    renderGallery(allItems.slice(0, visibleCount));
-    updateLoadMoreButton();
-    updateGalleryContext("list");
+  function resetGalleryPagination() {
+    visibleCount = Math.min(PAGE_SIZE, allItems.length);
+  }
+
+  function setupLoadMoreObserver() {
+    if (!SUPPORTS_INTERSECTION_OBSERVER) return;
+    if (galleryIntersectionObserver) {
+      galleryIntersectionObserver.disconnect();
+    }
+
+    galleryIntersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            loadMoreItems();
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: "120px 0px",
+        threshold: 0.05,
+      }
+    );
+
+    galleryIntersectionObserver.observe(loadMoreTrigger);
   }
 
   closeEl.addEventListener("click", closePreview);
@@ -411,13 +489,15 @@
     if (event.key === "Escape") closePreview();
   });
 
-  loadMoreBtn.addEventListener("click", renderNextPage);
+  loadMoreBtn.addEventListener("click", loadMoreItems);
 
   async function main() {
     renderGallerySkeleton();
     allItems = await loadGallery();
-    visibleCount = 0;
-    renderNextPage();
+    resetGalleryPagination();
+    setupLoadMoreObserver();
+    renderGallery(allItems.slice(0, visibleCount));
+    updateGalleryContext("list");
   }
 
   main();
