@@ -584,6 +584,12 @@
     showAuthError("");
     syncAuthPage();
     showAuthStatus(message);
+
+    // Register FCM push token after successful login (1x only)
+    if (window.TOGA_FCM?.requestAndRegister) {
+      window.TOGA_FCM.requestAndRegister();
+    }
+
     const next = new URLSearchParams(window.location.search).get("next");
     if (next && next !== "account.html") {
       window.setTimeout(() => {

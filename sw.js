@@ -33,6 +33,7 @@ const APP_SHELL_ASSETS = [
   "./assets/js/config.js",
   "./assets/js/gallery.js",
   "./assets/js/jadwal.js",
+  "./assets/js/fcm.js",
   "./assets/js/pwa.js",
   "./assets/js/ramuan.js",
   "./assets/js/theme.js",
@@ -59,6 +60,62 @@ self.addEventListener("message", (event) => {
   if (data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
+});
+
+// ── Push Notification Handler (Firebase Cloud Messaging) ──
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data?.json() || {};
+  } catch (_) {
+    try {
+      payload = { notification: { title: "TOGA", body: event.data?.text() || "" } };
+    } catch (__) {
+      payload = { notification: { title: "TOGA", body: "Ada pengingat baru." } };
+    }
+  }
+
+  const notif = payload.notification || {};
+  const data = payload.data || {};
+
+  const title = notif.title || "🔔 TOGA Reminder";
+  const options = {
+    body: notif.body || "Ada agenda yang akan segera dimulai.",
+    icon: "./assets/icons/icon-192.png",
+    badge: "./assets/icons/icon-192.png",
+    vibrate: [200, 100, 200],
+    tag: "toga-reminder-" + (data.event_id || Date.now()),
+    requireInteraction: true,
+    data: {
+      url: data.click_action || "./jadwal.html",
+      event_id: data.event_id || "",
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = event.notification.data?.url || "./jadwal.html";
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        // Focus existing tab if found
+        for (const client of clientList) {
+          if (client.url.includes("jadwal.html") && "focus" in client) {
+            return client.focus();
+          }
+        }
+        // Otherwise open new tab
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      })
+  );
 });
 
 self.addEventListener("fetch", (event) => {

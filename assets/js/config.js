@@ -32,6 +32,20 @@ window.TOGA_CONFIG = Object.assign(
     googleClientId: "48850536137-p383qe88mv03p23mb8e5j6mr84jg3tvj.apps.googleusercontent.com",
     // Opsional: jika diisi, hanya email ini yang boleh login via Google.
     allowedGoogleEmails: [],
+
+    // ── Firebase Cloud Messaging (Push Notifications) ──
+    // Isi dari Firebase Console > Project Settings > General > Your apps > Web
+    firebaseConfig: {
+      apiKey: "AIzaSyD322P4hrrnOgueb8MGpcNVMFjhJHoDrOw",
+      authDomain: "toga-firebase.firebaseapp.com",
+      projectId: "toga-firebase",
+      storageBucket: "toga-firebase.firebasestorage.app",
+      messagingSenderId: "957268204190",
+      appId: "1:957268204190:web:77abe63158ebef21d3b98f",
+      measurementId: "G-V9HSM8DREZ"
+    },
+    // Isi dari Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+    fcmVapidKey: "BE_rpk0maOjamG2XeLqgRutvRNgQrXtKhSEBeMB8ZbrTURWBmG0xZ_zg8yPZOHZDtbmnjbYtEjOSP2Mlwgr90V4",
   },
   window.TOGA_CONFIG || {}
 );
