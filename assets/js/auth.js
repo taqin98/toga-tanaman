@@ -17,9 +17,6 @@
     const config = window.TOGA_CONFIG || {};
     return {
       googleClientId: String(config.googleClientId || "").trim(),
-      allowedGoogleEmails: Array.isArray(config.allowedGoogleEmails)
-        ? config.allowedGoogleEmails
-        : [],
       authApiUrl: String(config.authApiUrl || "").trim(),
       aiChatUrl: String(config.aiChatUrl || "").trim(),
     };
