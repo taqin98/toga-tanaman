@@ -9,7 +9,7 @@
   const FETCH_TIMEOUT_MS = 12000;
   const CACHE_TTL_MS = 10 * 60 * 1000;
   const CACHE_KEY_GALLERY = "toga:gallery:list:v1";
-  const PAGE_SIZE = 9;
+  const PAGE_SIZE = 15;
   const SKELETON_COUNT = 9;
   const SUPPORTS_INTERSECTION_OBSERVER = "IntersectionObserver" in window;
   const MIN_SPINNER_MS = 240;
@@ -29,8 +29,6 @@
   const modalEl = document.getElementById("previewModal");
   const closeEl = document.getElementById("previewClose");
   const loadMoreTrigger = document.getElementById("loadMoreTrigger");
-  const loadMoreActions = document.getElementById("loadMoreActions");
-  const loadMoreBtn = document.getElementById("loadMoreBtn");
   const loadMoreDone = document.getElementById("loadMoreDone");
   const previewImgEl = document.getElementById("previewImg");
   const previewTitleEl = document.getElementById("previewTitle");
@@ -42,8 +40,6 @@
     !modalEl ||
     !closeEl ||
     !loadMoreTrigger ||
-    !loadMoreActions ||
-    !loadMoreBtn ||
     !loadMoreDone ||
     !previewImgEl ||
     !previewTitleEl ||
@@ -403,8 +399,6 @@
       "hidden",
       !SUPPORTS_INTERSECTION_OBSERVER || !hasMore || allItems.length === 0
     );
-    loadMoreActions.classList.toggle("hidden", allItems.length === 0);
-    loadMoreBtn.classList.toggle("hidden", !hasMore);
     loadMoreDone.classList.toggle("hidden", hasMore || allItems.length === 0);
 
     if (galleryIntersectionObserver) {
@@ -414,6 +408,29 @@
         galleryIntersectionObserver.observe(loadMoreTrigger);
       }
     }
+  }
+
+  function shouldAutoLoadMore() {
+    if (isLoadingMore) return false;
+    if (visibleCount >= allItems.length) return false;
+    if (loadMoreTrigger.classList.contains("hidden")) return false;
+
+    const rect = loadMoreTrigger.getBoundingClientRect();
+    const viewportHeight =
+      window.innerHeight || document.documentElement.clientHeight || 0;
+
+    return rect.top <= viewportHeight + 120;
+  }
+
+  function syncAutoLoadAfterRender() {
+    if (!SUPPORTS_INTERSECTION_OBSERVER) return;
+    if (!shouldAutoLoadMore()) return;
+
+    requestAnimationFrame(() => {
+      if (shouldAutoLoadMore()) {
+        loadMoreItems();
+      }
+    });
   }
 
   function renderGallerySkeleton(count = SKELETON_COUNT) {
@@ -433,16 +450,15 @@
     isLoadingMore = true;
     loadingStartedAt = Date.now();
     loadMoreTrigger.classList.add("is-loading");
-    loadMoreBtn.disabled = true;
 
     visibleCount = Math.min(visibleCount + PAGE_SIZE, allItems.length);
 
     const finishLoad = () => {
       renderGallery(allItems.slice(0, visibleCount), "append");
       loadMoreTrigger.classList.remove("is-loading");
-      loadMoreBtn.disabled = false;
       isLoadingMore = false;
       updateGalleryContext("list");
+      syncAutoLoadAfterRender();
     };
 
     requestAnimationFrame(() => {
@@ -489,8 +505,6 @@
     if (event.key === "Escape") closePreview();
   });
 
-  loadMoreBtn.addEventListener("click", loadMoreItems);
-
   async function main() {
     renderGallerySkeleton();
     allItems = await loadGallery();
@@ -498,6 +512,7 @@
     setupLoadMoreObserver();
     renderGallery(allItems.slice(0, visibleCount));
     updateGalleryContext("list");
+    syncAutoLoadAfterRender();
   }
 
   main();
