@@ -335,6 +335,12 @@
       } catch (_) {}
     }
     clearSession();
+
+    // Clear FCM token so next login re-registers for the new user
+    try {
+      localStorage.removeItem("toga:fcm:token");
+      localStorage.removeItem("toga:fcm:denied");
+    } catch (_) {}
   }
 
   function loadGoogleScript() {
