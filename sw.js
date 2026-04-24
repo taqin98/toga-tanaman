@@ -13,6 +13,7 @@ const APP_SHELL_ASSETS = [
   "./ar.html",
   "./gallery.html",
   "./ramuan.html",
+  "./marker-diagnostic.html",
   "./profile.html",
   "./settings.html",
   "./jadwal.html",
@@ -24,6 +25,7 @@ const APP_SHELL_ASSETS = [
   "./assets/css/account.css",
   "./assets/css/ar.css",
   "./assets/css/gallery.css",
+  "./assets/css/marker-diagnostic.css",
   "./assets/css/style.css",
   "./assets/css/jadwal.css",
   "./assets/js/app.js",
@@ -32,6 +34,7 @@ const APP_SHELL_ASSETS = [
   "./assets/js/chat.js",
   "./assets/js/config.js",
   "./assets/js/gallery.js",
+  "./assets/js/marker-diagnostic.js",
   "./assets/js/jadwal.js",
   "./assets/js/fcm.js",
   "./assets/js/pwa.js",
@@ -238,6 +241,7 @@ function resolveNavigationAsset(requestUrl) {
   if (path === "gallery.html") return "./gallery.html";
   if (path === "ramuan.html") return "./ramuan.html";
   if (path === "ar.html") return "./ar.html";
+  if (path === "marker-diagnostic.html") return "./marker-diagnostic.html";
   if (path === "profile.html") return "./profile.html";
   if (path === "settings.html") return "./settings.html";
   if (path === "jadwal.html") return "./jadwal.html";

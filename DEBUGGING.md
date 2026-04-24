@@ -72,6 +72,16 @@ ar.html?debug=1&batch=2&batchSize=5
 ```
 - Ini berguna untuk mencari marker rusak dari total banyak marker tanpa perlu scan semuanya sekaligus.
 
+Halaman alat diagnostik marker:
+- URL: `http://localhost/toga-tanaman/marker-diagnostic.html`
+- Alur pakai:
+  1. Buka halaman diagnostik.
+  2. Klik `Uji Grup A di AR` atau `Uji Grup B di AR`.
+  3. Jika tab AR crash atau marker di grup itu memicu error, kembali ke halaman diagnostik lalu klik `Crash di Grup ...`.
+  4. Jika grup itu aman, klik `Grup ... Aman`.
+  5. Ulangi sampai kandidat tinggal 1 marker atau 2 marker.
+- Tool ini memakai binary search agar 58 marker bisa dipersempit jauh lebih cepat daripada scan satu per satu.
+
 Force tampil object 3D marker dari Console (untuk adjust posisi/style):
 - Berdasarkan pilihan dropdown debug:
 ```js

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Alat diagnostik untuk mempersempit marker AR TOGA yang bermasalah dengan pembagian batch otomatis."
+    />
+    <title>Diagnostik Marker AR</title>
+    <meta name="theme-color" content="#dff0dd" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
+      />
+    </noscript>
+    <script>
+      (function () {
+        var key = "toga:theme";
+        var theme = "";
+        try {
+          theme = localStorage.getItem(key) || "";
+        } catch (_) {}
+        if (theme !== "dark" && theme !== "light") {
+          theme = "light";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute("content", theme === "dark" ? "#0f1a14" : "#dff0dd");
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="assets/css/marker-diagnostic.css" />
+  </head>
+  <body>
+    <div
+      data-topbar
+      data-topbar-title="Diagnostik Marker"
+      data-topbar-subtitle="Temukan marker AR bermasalah tanpa edit manifest manual"
+      data-topbar-back-href="./"
+    ></div>
+
+    <main class="container">
+      <section class="hero-panel reveal">
+        <div class="hero-copy">
+          <p class="hero-kicker">Tool Debug AR</p>
+          <h1 class="hero-title">Pecah 58 marker jadi batch kecil dengan binary search</h1>
+          <p class="hero-desc">
+            Buka AR untuk subset marker, tandai batch yang crash atau aman, lalu perkecil kandidat
+            marker bermasalah sampai tinggal satu atau beberapa nama saja.
+          </p>
+        </div>
+        <div class="chips">
+          <span class="chip">Flow user produksi tetap sama</span>
+          <span class="chip chip-soft">Kontrol debug terpisah</span>
+        </div>
+      </section>
+
+      <section class="card diag-card reveal">
+        <div class="diag-card__header">
+          <div>
+            <h2 class="diag-title">Status Diagnostik</h2>
+            <p class="diag-muted" id="diagStatusText">Memuat manifest marker...</p>
+          </div>
+          <div class="diag-actions diag-actions--compact">
+            <button class="btn btn-ghost" id="btnUndo" type="button">Undo</button>
+            <button class="btn btn-ghost" id="btnReset" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div class="diag-stats" id="diagStats"></div>
+
+        <div class="diag-actions">
+          <a class="btn" id="btnOpenCurrent" href="./ar.html?debug=1" target="_blank" rel="noopener noreferrer">
+            Buka AR Untuk Kandidat Saat Ini
+          </a>
+          <button class="btn btn-ghost" id="btnCopyCurrent" type="button">Copy URL Kandidat</button>
+        </div>
+      </section>
+
+      <section class="diag-layout">
+        <section class="card diag-card reveal">
+          <div class="diag-card__header">
+            <div>
+              <h2 class="diag-title">Grup A</h2>
+              <p class="diag-muted" id="groupALabel">Menunggu data...</p>
+            </div>
+          </div>
+          <div class="diag-chiplist" id="groupAIds"></div>
+          <div class="diag-actions">
+            <a class="btn" id="btnOpenA" href="./ar.html?debug=1" target="_blank" rel="noopener noreferrer">
+              Uji Grup A di AR
+            </a>
+            <button class="btn btn-ghost" id="btnCopyA" type="button">Copy URL A</button>
+          </div>
+          <div class="diag-actions">
+            <button class="btn diag-btn-danger" id="btnCrashA" type="button">Crash di Grup A</button>
+            <button class="btn btn-ghost" id="btnSafeA" type="button">Grup A Aman</button>
+          </div>
+        </section>
+
+        <section class="card diag-card reveal">
+          <div class="diag-card__header">
+            <div>
+              <h2 class="diag-title">Grup B</h2>
+              <p class="diag-muted" id="groupBLabel">Menunggu data...</p>
+            </div>
+          </div>
+          <div class="diag-chiplist" id="groupBIds"></div>
+          <div class="diag-actions">
+            <a class="btn" id="btnOpenB" href="./ar.html?debug=1" target="_blank" rel="noopener noreferrer">
+              Uji Grup B di AR
+            </a>
+            <button class="btn btn-ghost" id="btnCopyB" type="button">Copy URL B</button>
+          </div>
+          <div class="diag-actions">
+            <button class="btn diag-btn-danger" id="btnCrashB" type="button">Crash di Grup B</button>
+            <button class="btn btn-ghost" id="btnSafeB" type="button">Grup B Aman</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="card diag-card reveal">
+        <div class="diag-card__header">
+          <div>
+            <h2 class="diag-title">Kandidat Saat Ini</h2>
+            <p class="diag-muted">
+              Jika kandidat tinggal satu, itulah marker yang paling layak dicurigai lebih dulu.
+            </p>
+          </div>
+        </div>
+        <div class="diag-chiplist" id="candidateIds"></div>
+      </section>
+
+      <section class="card diag-card reveal">
+        <div class="diag-card__header">
+          <div>
+            <h2 class="diag-title">Riwayat</h2>
+            <p class="diag-muted">
+              Gunakan ini untuk melihat batch mana yang sudah diuji dan hasil narrowing terakhir.
+            </p>
+          </div>
+        </div>
+        <div class="diag-history" id="historyList"></div>
+      </section>
+    </main>
+
+    <script src="assets/js/topbar.js" defer></script>
+    <script src="assets/js/theme.js" defer></script>
+    <script src="assets/js/pwa.js" defer></script>
+    <script src="assets/js/marker-diagnostic.js" defer></script>
+  </body>
+</html>
