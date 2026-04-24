@@ -6,6 +6,7 @@ const API_URL =
     ? window.TOGA_CONFIG.apiUrl.trim()
     : DEFAULT_API_URL;
 const LOCAL_DATA_URL = "data/plants.json";
+const MARKER_MANIFEST_URL = "markers/manifest.json";
 const FETCH_TIMEOUT_MS = 12000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_KEY_AR_LIST = "toga:ar:plants:full:v1";
@@ -588,6 +589,25 @@ function makeMarker(plant) {
   return marker;
 }
 
+async function loadAvailableMarkerIds() {
+  const manifest = await fetchJSON(MARKER_MANIFEST_URL);
+  const entries = Array.isArray(manifest)
+    ? manifest
+    : Array.isArray(manifest?.markers)
+      ? manifest.markers
+      : [];
+
+  return new Set(
+    entries
+      .map((entry) => {
+        if (typeof entry === "string") return entry.trim();
+        if (entry && typeof entry.id === "string") return entry.id.trim();
+        return "";
+      })
+      .filter(Boolean)
+  );
+}
+
 function setupDebugMode(plants) {
   if (!DEBUG_MODE || !debugPanel || !debugSelect) return;
 
@@ -733,7 +753,10 @@ async function main() {
   setScanState("loading");
   setHudText("AR TOGA • Memuat data tanaman...");
   try {
-    const result = await loadPlants();
+    const [result, availableMarkerIds] = await Promise.all([
+      loadPlants(),
+      loadAvailableMarkerIds(),
+    ]);
     const plants = result.plants;
     arDataSource = result.source || "remote";
 
@@ -742,6 +765,9 @@ async function main() {
       setHudText("AR TOGA • Data tanaman kosong");
       return;
     }
+
+    let registeredMarkers = 0;
+    let skippedMarkers = 0;
 
     plants.forEach((p) => {
       const id = safeStr(p.id).trim();
@@ -752,13 +778,36 @@ async function main() {
           detailUrl: `./?id=${encodeURIComponent(id)}`,
         });
       }
+
+      if (!id || !availableMarkerIds.has(id)) {
+        skippedMarkers += 1;
+        logDebug("markerSkipped", {
+          id,
+          reason: id ? "patternMissing" : "missingId",
+        });
+        return;
+      }
+
       const marker = makeMarker(p);
-      if (marker) root.appendChild(marker);
+      if (marker) {
+        root.appendChild(marker);
+        registeredMarkers += 1;
+      }
     });
 
     setupDebugMode(plants);
     setScanState("scanning");
-    setHudText("AR TOGA • Siap. Arahkan kamera ke marker pattern.");
+    if (!registeredMarkers) {
+      setScanState("error");
+      setHudText("AR TOGA • Tidak ada marker pattern yang cocok dengan data.");
+      return;
+    }
+
+    setHudText(
+      skippedMarkers > 0
+        ? `AR TOGA • Siap. ${registeredMarkers} marker aktif, ${skippedMarkers} dilewati.`
+        : "AR TOGA • Siap. Arahkan kamera ke marker pattern."
+    );
     applyPreviewMode(plants);
   } catch (e) {
     console.error(e);
