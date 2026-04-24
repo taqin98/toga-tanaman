@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v13.4.6";
+const SW_VERSION = "toga-v13.4.7";
 
 const CACHE_NAMES = {
   appShell: `${SW_VERSION}-app-shell`,
@@ -43,10 +43,16 @@ const APP_SHELL_ASSETS = [
   "./assets/icons/shortcut.png",
   "./assets/screenshots/install-mobile.png",
   "./data/plants.json",
+  "./markers/manifest.json",
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(precacheAppShell());
+  event.waitUntil(
+    (async () => {
+      await precacheAppShell();
+      await self.skipWaiting();
+    })()
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -136,6 +142,11 @@ self.addEventListener("fetch", (event) => {
 
   if (isGoogleDriveThumbnailRequest(url)) {
     event.respondWith(cacheFirst(request, CACHE_NAMES.images));
+    return;
+  }
+
+  if (isMarkerPatternRequest(url) || isMarkerManifestRequest(url)) {
+    event.respondWith(networkFirst(request, CACHE_NAMES.assets));
     return;
   }
 
@@ -245,6 +256,14 @@ function isApiRequest(url) {
 
 function isGoogleDriveThumbnailRequest(url) {
   return url.hostname === "drive.google.com" && url.pathname === "/thumbnail";
+}
+
+function isMarkerPatternRequest(url) {
+  return url.origin === self.location.origin && url.pathname.endsWith(".patt");
+}
+
+function isMarkerManifestRequest(url) {
+  return url.origin === self.location.origin && url.pathname.endsWith("/markers/manifest.json");
 }
 
 async function cacheFirst(request, cacheName) {

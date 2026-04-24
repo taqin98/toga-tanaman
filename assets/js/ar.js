@@ -6,7 +6,8 @@ const API_URL =
     ? window.TOGA_CONFIG.apiUrl.trim()
     : DEFAULT_API_URL;
 const LOCAL_DATA_URL = "data/plants.json";
-const MARKER_MANIFEST_URL = "markers/manifest.json";
+const MARKER_ASSET_VERSION = "2026-04-24-2";
+const MARKER_MANIFEST_URL = `markers/manifest.json?v=${encodeURIComponent(MARKER_ASSET_VERSION)}`;
 const FETCH_TIMEOUT_MS = 12000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_KEY_AR_LIST = "toga:ar:plants:full:v1";
@@ -528,10 +529,13 @@ function makeMarker(plant) {
   const gambar = safeStr(plant.gambar || "");
   const manfaat = plant.manfaat || "";
   const detailUrl = `./?id=${encodeURIComponent(id)}`;
+  const patternUrl = `markers/${encodeURIComponent(id)}.patt?v=${encodeURIComponent(
+    MARKER_ASSET_VERSION
+  )}`;
 
   const marker = document.createElement("a-marker");
   marker.setAttribute("type", "pattern");
-  marker.setAttribute("url", `markers/${encodeURIComponent(id)}.patt`);
+  marker.setAttribute("url", patternUrl);
   marker.setAttribute("id", `m_${id}`);
   marker.setAttribute("smooth", "true");
   marker.setAttribute("smoothCount", "10");
