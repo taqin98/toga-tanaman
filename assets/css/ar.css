@@ -127,28 +127,8 @@ html {
 a-scene,
 .a-canvas,
 #arjs-video,
-.ar-overlay,
-.ar-camera-stage,
-.ar-camera-video {
+.ar-overlay {
   touch-action: none;
-}
-
-.ar-camera-stage {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  background: #000;
-}
-
-.ar-camera-stage.is-hidden {
-  display: none;
-}
-
-.ar-camera-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 .ar-overlay {
@@ -167,39 +147,6 @@ a-scene,
   grid-template-columns: 40px 1fr 40px;
   align-items: center;
   gap: 8px;
-}
-
-.ar-topbar__center {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.ar-stage-indicator {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  pointer-events: auto;
-  animation: hudFadeDown 0.45s ease both;
-}
-
-.ar-stage-indicator__badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(18, 54, 34, 0.72);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
-  color: #f2fff4;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .ar-icon-btn {
@@ -383,15 +330,6 @@ html[data-theme="dark"] .hud {
   background: linear-gradient(145deg, rgba(18, 41, 28, 0.88), rgba(35, 75, 46, 0.78));
 }
 
-html[data-theme="dark"] .ar-stage-indicator {
-  color: #f2fff4;
-}
-
-html[data-theme="dark"] .ar-stage-indicator__badge {
-  border-color: rgba(166, 209, 181, 0.22);
-  background: rgba(12, 28, 19, 0.86);
-}
-
 html[data-theme="dark"] .ar-icon-btn {
   border-color: rgba(166, 209, 181, 0.3);
   background: rgba(18, 33, 24, 0.76);
@@ -506,111 +444,5 @@ html[data-theme="dark"] .btn {
   *::after {
     animation: none !important;
     transition: none !important;
-  }
-}
-
-@media (max-width: 640px) {
-  .ar-topbar {
-    top: calc(8px + env(safe-area-inset-top));
-    left: 8px;
-    right: 8px;
-    grid-template-columns: 40px 1fr 40px;
-    gap: 6px;
-  }
-
-  .hud {
-    max-width: calc(100% - 92px);
-    padding: 9px 10px;
-    font-size: 11px;
-    line-height: 1.35;
-  }
-
-  .ar-stage-indicator {
-    width: 100%;
-  }
-
-  .ar-stage-indicator__badge {
-    min-height: 24px;
-    padding: 0 10px;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-  }
-
-  .ar-scan-frame {
-    width: min(82vw, 320px);
-    transform: translate(-50%, -52%);
-    border-radius: 22px;
-  }
-
-  .ar-corner {
-    width: 28px;
-    height: 28px;
-  }
-
-  .ar-dock {
-    left: 12px;
-    right: 12px;
-    transform: none;
-    border-radius: 22px;
-    padding: 8px;
-  }
-
-  .btn-detail {
-    width: 100%;
-    min-width: 0;
-    height: 50px;
-    padding: 0 16px;
-  }
-
-  .btn-detail-text {
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 380px) {
-  .ar-topbar {
-    grid-template-columns: 36px 1fr 36px;
-  }
-
-  .ar-icon-btn,
-  .btn-back {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-  }
-
-  .ar-icon-btn svg,
-  .btn-back svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .hud {
-    max-width: calc(100% - 84px);
-    padding: 8px 9px;
-    font-size: 10px;
-  }
-
-  .ar-stage-indicator {
-    width: 100%;
-  }
-
-  .ar-scan-frame {
-    width: min(84vw, 290px);
-  }
-}
-
-@media (max-height: 740px) {
-  .ar-scan-frame {
-    top: 48%;
-    width: min(72vw, 300px);
-  }
-
-  .ar-dock {
-    bottom: calc(8px + env(safe-area-inset-bottom));
-  }
-
-  .debug-panel {
-    bottom: calc(88px + env(safe-area-inset-bottom));
   }
 }

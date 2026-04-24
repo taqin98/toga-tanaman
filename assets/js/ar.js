@@ -34,8 +34,6 @@ const FILTER_ONLY_IDS = new Set(
 );
 const FILTER_BATCH_SIZE = Math.max(0, Number(SEARCH_PARAMS.get("batchSize")) || 0);
 const FILTER_BATCH_INDEX = Math.max(1, Number(SEARCH_PARAMS.get("batch")) || 1);
-const DIRECT_ID = (SEARCH_PARAMS.get("id") || "").trim().toLowerCase();
-if (DIRECT_ID) FILTER_ONLY_IDS.add(DIRECT_ID);
 
 const hud = document.getElementById("hud");
 const btnBack = document.getElementById("btnBack");
@@ -43,10 +41,8 @@ const btn = document.getElementById("btnDetail");
 const arDock = document.getElementById("arDock");
 const btnDebugToggle = document.getElementById("btnDebugToggle");
 const scanFrame = document.querySelector(".ar-scan-frame");
-const stageBadge = document.getElementById("stageBadge");
-const qrStage = document.getElementById("qrStage");
-const qrVideo = document.getElementById("qrVideo");
-const arStage = document.getElementById("arStage");
+const root = document.getElementById("root");
+const sceneEl = document.querySelector("a-scene");
 
 const debugPanel = document.getElementById("debugPanel");
 const debugSelect = document.getElementById("debugSelect");
@@ -64,15 +60,6 @@ const plantById = new Map();
 const debugEvents = [];
 let scanState = "loading";
 let arDataSource = "remote";
-let cameraMode = FILTER_ONLY_IDS.size > 0 || PREVIEW_TARGET ? "ar" : "qr";
-let sceneEl = null;
-let root = null;
-let qrDetector = null;
-let qrScanTimer = 0;
-let qrScanBusy = false;
-let qrScanActive = false;
-let qrStream = null;
-let arStarted = false;
 const IS_ANDROID = /android/i.test(window.navigator.userAgent || "");
 
 if (btnDebugToggle && !DEBUG_MODE) {
@@ -80,55 +67,7 @@ if (btnDebugToggle && !DEBUG_MODE) {
   btnDebugToggle.style.pointerEvents = "none";
 }
 
-function createArScene() {
-  if (sceneEl) return sceneEl;
-
-  sceneEl = document.createElement("a-scene");
-  sceneEl.setAttribute("embedded", "");
-  sceneEl.setAttribute("vr-mode-ui", "enabled:false");
-  sceneEl.setAttribute("renderer", "antialias:true; alpha:true;");
-  sceneEl.setAttribute("arjs", "sourceType: webcam; debugUIEnabled:false;");
-
-  const cameraEl = document.createElement("a-entity");
-  cameraEl.setAttribute("camera", "");
-
-  const assetsEl = document.createElement("a-assets");
-  assetsEl.id = "assets";
-
-  root = document.createElement("a-entity");
-  root.id = "root";
-
-  sceneEl.appendChild(cameraEl);
-  sceneEl.appendChild(assetsEl);
-  sceneEl.appendChild(root);
-  arStage.appendChild(sceneEl);
-  sceneEl.addEventListener("loaded", () => {
-    window.setTimeout(applyArCameraViewport, 180);
-  });
-
-  return sceneEl;
-}
-
-function setCameraMode(nextMode) {
-  cameraMode = nextMode;
-  qrStage?.classList.toggle("is-hidden", nextMode !== "qr");
-  arStage?.classList.toggle("is-hidden", nextMode !== "ar");
-  updateStageIndicator();
-}
-
-function updateStageIndicator() {
-  if (!stageBadge) return;
-
-  if (cameraMode === "qr") {
-    stageBadge.textContent = "Mode QR";
-    return;
-  }
-
-  stageBadge.textContent = "Mode AR";
-}
-
 updateActiveUI();
-updateStageIndicator();
 
 function getViewportSize() {
   return {
@@ -348,133 +287,6 @@ function normalizeMarkerId(value) {
   return safeStr(value).trim().toLowerCase();
 }
 
-function shouldStartWithQrBootstrap() {
-  return FILTER_ONLY_IDS.size === 0 && !PREVIEW_TARGET;
-}
-
-async function createQrDetector() {
-  if (typeof window.BarcodeDetector !== "function") return null;
-
-  try {
-    if (typeof window.BarcodeDetector.getSupportedFormats === "function") {
-      const formats = await window.BarcodeDetector.getSupportedFormats();
-      if (!formats.includes("qr_code")) return null;
-    }
-    return new window.BarcodeDetector({ formats: ["qr_code"] });
-  } catch (_) {
-    return null;
-  }
-}
-
-function extractMarkerIdFromQrValue(rawValue) {
-  const input = safeStr(rawValue).trim();
-  if (!input) return "";
-
-  if (/^[a-z0-9_-]+$/i.test(input)) {
-    return input;
-  }
-
-  try {
-    const url = new URL(input, window.location.href);
-    const id = safeStr(url.searchParams.get("id")).trim();
-    if (id) return id;
-  } catch (_) {}
-
-  return "";
-}
-
-function stopQrBootstrapStream() {
-  qrScanActive = false;
-  qrScanBusy = false;
-  if (qrScanTimer) {
-    clearTimeout(qrScanTimer);
-    qrScanTimer = 0;
-  }
-  if (qrStream) {
-    qrStream.getTracks().forEach((track) => track.stop());
-    qrStream = null;
-  }
-  if (qrVideo) {
-    qrVideo.pause();
-    qrVideo.srcObject = null;
-  }
-}
-
-async function handleQrDetection(rawValue) {
-  const markerId = extractMarkerIdFromQrValue(rawValue);
-  if (!markerId) {
-    logDebug("qrIgnored", { rawValue });
-    return;
-  }
-
-  FILTER_ONLY_IDS.clear();
-  FILTER_ONLY_IDS.add(normalizeMarkerId(markerId));
-  logDebug("qrDetected", { rawValue, markerId });
-  setHudText(`AR TOGA • QR ${markerId} terbaca, menyalakan AR...`);
-  stopQrBootstrapStream();
-  await startArMode();
-}
-
-async function scanQrFrame() {
-  if (!qrScanActive || qrScanBusy || !qrDetector || !qrVideo) return;
-  if (qrVideo.readyState < 2) return;
-
-  qrScanBusy = true;
-  try {
-    const barcodes = await qrDetector.detect(qrVideo);
-    const barcode = Array.isArray(barcodes) ? barcodes.find((item) => safeStr(item.rawValue).trim()) : null;
-    if (barcode) {
-      await handleQrDetection(barcode.rawValue);
-    }
-  } catch (error) {
-    logDebug("qrDetectError", { message: error?.message || String(error) });
-  } finally {
-    qrScanBusy = false;
-  }
-}
-
-function queueQrScan() {
-  if (!qrScanActive) return;
-  qrScanTimer = window.setTimeout(async () => {
-    await scanQrFrame();
-    queueQrScan();
-  }, 220);
-}
-
-async function startQrMode() {
-  setCameraMode("qr");
-  setDockVisible(false);
-  setScanFrameVisible(true);
-  setScanState("loading");
-  setHudText("AR TOGA • Membuka kamera QR...");
-
-  qrDetector = await createQrDetector();
-  if (!qrDetector) {
-    setHudText("AR TOGA • QR scanner tidak didukung, langsung ke mode AR.");
-    logDebug("qrDetectorUnsupported");
-    await startArMode();
-    return;
-  }
-
-  try {
-    qrStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { ideal: "environment" },
-      },
-    });
-    qrVideo.srcObject = qrStream;
-    await qrVideo.play();
-    qrScanActive = true;
-    updateActiveUI();
-    queueQrScan();
-  } catch (error) {
-    console.error(error);
-    setScanState("error");
-    setHudText("AR TOGA • Kamera QR gagal dibuka.");
-  }
-}
-
 function isHttpUrl(url) {
   return /^https?:\/\//i.test(url || "");
 }
@@ -623,11 +435,7 @@ function updateActiveUI() {
   btnBack.style.display = "grid";
   if (!top) {
     setScanState("scanning");
-    if (cameraMode === "qr") {
-      setHudText("AR TOGA • Scan QR tanaman untuk memulai AR");
-    } else {
-      setHudText("AR TOGA • Arahkan kamera ke marker pattern");
-    }
+    setHudText("AR TOGA • Arahkan kamera ke marker pattern");
     setDockVisible(false);
     btn.style.display = "none";
     btn.href = "#";
@@ -698,7 +506,6 @@ function forceMarkerVisible(id) {
 
 function ensureImageAsset(id, gambar) {
   const assetsEl = document.getElementById("assets");
-  if (!assetsEl) return `img_${id}`;
   const assetId = `img_${id}`;
   if (document.getElementById(assetId)) return assetId;
 
@@ -987,14 +794,6 @@ async function loadPlants() {
   };
 }
 
-async function startArMode() {
-  if (arStarted) return;
-  arStarted = true;
-  setCameraMode("ar");
-  createArScene();
-  await main();
-}
-
 async function main() {
   setScanState("loading");
   setHudText("AR TOGA • Memuat data tanaman...");
@@ -1086,11 +885,8 @@ window.visualViewport?.addEventListener("scroll", () => {
 window.addEventListener("orientationchange", () => {
   window.setTimeout(applyArCameraViewport, 180);
 });
+sceneEl?.addEventListener("loaded", () => {
+  window.setTimeout(applyArCameraViewport, 180);
+});
 
-(async () => {
-  if (shouldStartWithQrBootstrap()) {
-    await startQrMode();
-    return;
-  }
-  await startArMode();
-})();
+main();
