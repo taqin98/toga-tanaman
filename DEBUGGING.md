@@ -56,6 +56,22 @@ Preview marker tanpa scan dari URL:
   - memicu state seperti marker terdeteksi
   - memaksa objek A-Frame marker tampil untuk tuning posisi/style
 
+Membatasi marker yang dimuat saat debug:
+- Marker tertentu saja:
+```text
+ar.html?debug=1&ids=kunyit,jahe,kencur
+```
+- Alias parameter yang sama:
+```text
+ar.html?debug=1&markers=kunyit,jahe,kencur
+```
+- Batch kecil tanpa edit file manifest:
+```text
+ar.html?debug=1&batch=1&batchSize=5
+ar.html?debug=1&batch=2&batchSize=5
+```
+- Ini berguna untuk mencari marker rusak dari total banyak marker tanpa perlu scan semuanya sekaligus.
+
 Force tampil object 3D marker dari Console (untuk adjust posisi/style):
 - Berdasarkan pilihan dropdown debug:
 ```js

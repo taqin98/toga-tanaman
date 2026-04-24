@@ -26,6 +26,14 @@ const LOST_DEBOUNCE_MS = 350;
 const FOUND_EVENT_THROTTLE_MS = 220;
 const DEBUG_MODE = SEARCH_PARAMS.get("debug") === "1";
 const PREVIEW_TARGET = (SEARCH_PARAMS.get("preview") || "").trim();
+const FILTER_ONLY_IDS = new Set(
+  ((SEARCH_PARAMS.get("ids") || "") + "," + (SEARCH_PARAMS.get("markers") || ""))
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+);
+const FILTER_BATCH_SIZE = Math.max(0, Number(SEARCH_PARAMS.get("batchSize")) || 0);
+const FILTER_BATCH_INDEX = Math.max(1, Number(SEARCH_PARAMS.get("batch")) || 1);
 
 const hud = document.getElementById("hud");
 const btnBack = document.getElementById("btnBack");
@@ -221,8 +229,18 @@ function dataSourceHint(source) {
   return "";
 }
 
+function markerFilterHint() {
+  if (FILTER_ONLY_IDS.size > 0) {
+    return ` • filter ${Array.from(FILTER_ONLY_IDS).join(", ")}`;
+  }
+  if (FILTER_BATCH_SIZE > 0) {
+    return ` • batch ${FILTER_BATCH_INDEX}/${FILTER_BATCH_SIZE}`;
+  }
+  return "";
+}
+
 function setHudText(message) {
-  hud.textContent = `${message}${dataSourceHint(arDataSource)}`;
+  hud.textContent = `${message}${dataSourceHint(arDataSource)}${markerFilterHint()}`;
 }
 
 function logDebug(event, payload = {}) {
@@ -263,6 +281,10 @@ function firstBullets(arr, n = 3) {
 
 function safeStr(v) {
   return v === null || v === undefined ? "" : String(v);
+}
+
+function normalizeMarkerId(value) {
+  return safeStr(value).trim().toLowerCase();
 }
 
 function isHttpUrl(url) {
@@ -612,6 +634,25 @@ async function loadAvailableMarkerIds() {
   );
 }
 
+function filterMarkerIds(availableMarkerIds) {
+  const ids = Array.from(availableMarkerIds).sort((a, b) => a.localeCompare(b));
+
+  if (FILTER_ONLY_IDS.size > 0) {
+    return new Set(ids.filter((id) => FILTER_ONLY_IDS.has(normalizeMarkerId(id))));
+  }
+
+  if (FILTER_BATCH_SIZE > 0) {
+    const start = (FILTER_BATCH_INDEX - 1) * FILTER_BATCH_SIZE;
+    return new Set(ids.slice(start, start + FILTER_BATCH_SIZE));
+  }
+
+  return new Set(ids);
+}
+
+function filterPlantsByMarkerIds(plants, markerIds) {
+  return plants.filter((plant) => markerIds.has(safeStr(plant.id).trim()));
+}
+
 function setupDebugMode(plants) {
   if (!DEBUG_MODE || !debugPanel || !debugSelect) return;
 
@@ -757,16 +798,22 @@ async function main() {
   setScanState("loading");
   setHudText("AR TOGA • Memuat data tanaman...");
   try {
-    const [result, availableMarkerIds] = await Promise.all([
+    const [result, availableMarkerIdsRaw] = await Promise.all([
       loadPlants(),
       loadAvailableMarkerIds(),
     ]);
-    const plants = result.plants;
+    const availableMarkerIds = filterMarkerIds(availableMarkerIdsRaw);
+    const plants = filterPlantsByMarkerIds(result.plants, availableMarkerIds);
     arDataSource = result.source || "remote";
 
     if (!plants.length) {
       setScanState("error");
-      setHudText("AR TOGA • Data tanaman kosong");
+      setHudText("AR TOGA • Tidak ada marker yang cocok dengan filter.");
+      logDebug("markerFilterEmpty", {
+        ids: Array.from(FILTER_ONLY_IDS),
+        batchSize: FILTER_BATCH_SIZE,
+        batch: FILTER_BATCH_INDEX,
+      });
       return;
     }
 
