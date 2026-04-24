@@ -83,6 +83,12 @@
         </div>
       </div>
     </div>
+    <div class="ar-camera-stage" id="qrStage">
+      <video id="qrVideo" class="ar-camera-video" autoplay muted playsinline></video>
+    </div>
+
+    <div class="ar-camera-stage is-hidden" id="arStage"></div>
+
     <div class="ar-overlay">
       <div class="ar-topbar">
         <a class="ar-icon-btn btn-back" id="btnBack" href="./" aria-label="Kembali ke home">
@@ -90,7 +96,12 @@
             <path d="m15 6-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
-        <div class="hud" id="hud">AR TOGA • Arahkan kamera ke marker pattern</div>
+        <div class="ar-topbar__center">
+          <div class="hud" id="hud">AR TOGA • Arahkan kamera ke marker pattern</div>
+          <div class="ar-stage-indicator" id="stageIndicator" aria-live="polite">
+            <div class="ar-stage-indicator__badge" id="stageBadge">Mode QR</div>
+          </div>
+        </div>
         <button class="ar-icon-btn" id="btnDebugToggle" type="button" aria-label="Buka panel debug">
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="currentColor" stroke-width="1.6"/>
@@ -146,16 +157,6 @@
       >[]</pre>
     </div>
 
-    <a-scene
-      embedded
-      vr-mode-ui="enabled:false"
-      renderer="antialias:true; alpha:true;"
-      arjs="sourceType: webcam; debugUIEnabled:false;"
-    >
-      <a-entity camera></a-entity>
-      <a-assets id="assets"></a-assets>
-      <a-entity id="root"></a-entity>
-    </a-scene>
     <script src="assets/js/config.js" defer></script>
     <script src="assets/js/ar.js" defer></script>
     <script src="assets/js/theme.js" defer></script>
