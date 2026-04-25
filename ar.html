@@ -90,7 +90,7 @@
             <path d="m15 6-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
-        <div class="hud" id="hud">AR TOGA • Arahkan kamera ke marker pattern</div>
+        <div class="hud" id="hud">Tahan kamera ke kartu</div>
         <button class="ar-icon-btn" id="btnDebugToggle" type="button" aria-label="Buka panel debug">
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="currentColor" stroke-width="1.6"/>
@@ -107,6 +107,19 @@
         <span class="ar-scan-line"></span>
       </div>
 
+      <div class="ar-instruction" id="arInstruction" role="status" aria-live="polite">
+        <span class="ar-instruction__spinner" id="arInstructionSpinner" aria-hidden="true"></span>
+        <span class="ar-instruction__icon" id="arInstructionIcon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="m5 12 4.2 4.2L19 6.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="ar-instruction__copy">
+          <span class="ar-instruction__title" id="arInstructionTitle">Membuka AR...</span>
+          <span class="ar-instruction__desc" id="arInstructionDesc">Tahan kamera tetap mengarah ke kartu.</span>
+        </span>
+      </div>
+
       <div class="ar-dock" id="arDock">
         <a class="btn btn-detail" id="btnDetail" href="#" target="_blank" rel="noopener noreferrer" aria-label="Buka detail tanaman">
           <svg viewBox="0 0 24 24" fill="none">
@@ -116,6 +129,8 @@
           <span class="btn-detail-text">Detail Tanaman</span>
         </a>
       </div>
+
+      <div class="ar-toast" id="arToast" role="status" aria-live="polite"></div>
     </div>
 
     <div class="debug-panel" id="debugPanel">

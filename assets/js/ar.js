@@ -12,6 +12,9 @@ const FETCH_TIMEOUT_MS = 12000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_KEY_AR_LIST = "toga:ar:plants:full:v1";
 const SEARCH_PARAMS = new URLSearchParams(window.location.search);
+const TARGET_ID = normalizeTargetId(
+  SEARCH_PARAMS.get("id") || SEARCH_PARAMS.get("plant") || ""
+);
 
 const PLACEHOLDER_SVG_DATA =
   "data:image/svg+xml;utf8," +
@@ -27,7 +30,8 @@ const FOUND_EVENT_THROTTLE_MS = 220;
 const DEBUG_MODE = SEARCH_PARAMS.get("debug") === "1";
 const PREVIEW_TARGET = (SEARCH_PARAMS.get("preview") || "").trim();
 const FILTER_ONLY_IDS = new Set(
-  ((SEARCH_PARAMS.get("ids") || "") + "," + (SEARCH_PARAMS.get("markers") || ""))
+  [TARGET_ID, SEARCH_PARAMS.get("ids") || "", SEARCH_PARAMS.get("markers") || ""]
+    .join(",")
     .split(",")
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean)
@@ -43,6 +47,10 @@ const btnDebugToggle = document.getElementById("btnDebugToggle");
 const scanFrame = document.querySelector(".ar-scan-frame");
 const root = document.getElementById("root");
 const sceneEl = document.querySelector("a-scene");
+const arInstruction = document.getElementById("arInstruction");
+const arInstructionTitle = document.getElementById("arInstructionTitle");
+const arInstructionDesc = document.getElementById("arInstructionDesc");
+const arToast = document.getElementById("arToast");
 
 const debugPanel = document.getElementById("debugPanel");
 const debugSelect = document.getElementById("debugSelect");
@@ -60,7 +68,24 @@ const plantById = new Map();
 const debugEvents = [];
 let scanState = "loading";
 let arDataSource = "remote";
+let toastTimer = 0;
 const IS_ANDROID = /android/i.test(window.navigator.userAgent || "");
+
+function normalizeTargetId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const looksLikeUrl =
+    /^[a-z][a-z\d+.-]*:\/\//i.test(raw) || raw.includes("?") || raw.includes("/");
+  if (!looksLikeUrl) return raw;
+
+  try {
+    const url = new URL(raw, window.location.href);
+    return String(url.searchParams.get("id") || raw).trim();
+  } catch (_) {
+    return raw;
+  }
+}
 
 if (btnDebugToggle && !DEBUG_MODE) {
   btnDebugToggle.style.visibility = "hidden";
@@ -205,7 +230,7 @@ function bindAndroidCameraViewportFix() {
 
   if (watchVideo()) return;
 
-  const observer = new MutationObserver(() => {
+  const observer = new window.MutationObserver(() => {
     if (!watchVideo()) return;
     observer.disconnect();
   });
@@ -223,13 +248,42 @@ function setDockVisible(visible) {
   arDock.style.display = visible ? "block" : "none";
 }
 
+function setInstruction({ title, desc, mode = "loading", visible = true }) {
+  if (!arInstruction) return;
+
+  if (arInstructionTitle) arInstructionTitle.textContent = title || "";
+  if (arInstructionDesc) arInstructionDesc.textContent = desc || "";
+
+  arInstruction.classList.toggle("is-hidden", !visible);
+  arInstruction.classList.toggle("is-ready", mode === "ready");
+  arInstruction.classList.toggle("is-success", mode === "success");
+  arInstruction.classList.toggle("is-plain", mode === "plain");
+  arInstruction.setAttribute("aria-busy", mode === "loading" ? "true" : "false");
+}
+
+function hideInstruction() {
+  setInstruction({ title: "", desc: "", mode: "plain", visible: false });
+}
+
+function showToast(message) {
+  if (!arToast) return;
+  window.clearTimeout(toastTimer);
+  arToast.textContent = message;
+  arToast.classList.add("is-visible");
+  toastTimer = window.setTimeout(() => {
+    arToast.classList.remove("is-visible");
+  }, 1400);
+}
+
 function dataSourceHint(source) {
+  if (!DEBUG_MODE) return "";
   if (source === "cache") return " • sumber cache";
   if (source === "local") return " • sumber lokal";
   return "";
 }
 
 function markerFilterHint() {
+  if (!DEBUG_MODE) return "";
   if (FILTER_ONLY_IDS.size > 0) {
     return ` • filter ${Array.from(FILTER_ONLY_IDS).join(", ")}`;
   }
@@ -240,6 +294,7 @@ function markerFilterHint() {
 }
 
 function setHudText(message) {
+  if (!hud) return;
   hud.textContent = `${message}${dataSourceHint(arDataSource)}${markerFilterHint()}`;
 }
 
@@ -435,7 +490,12 @@ function updateActiveUI() {
   btnBack.style.display = "grid";
   if (!top) {
     setScanState("scanning");
-    setHudText("AR TOGA • Arahkan kamera ke marker pattern");
+    setHudText("Tahan kamera ke kartu");
+    setInstruction({
+      title: "Tahan kamera ke kartu",
+      desc: "Objek AR akan muncul otomatis.",
+      mode: "ready",
+    });
     setDockVisible(false);
     btn.style.display = "none";
     btn.href = "#";
@@ -444,7 +504,8 @@ function updateActiveUI() {
   }
 
   setScanState("found");
-  setHudText(`Marker terdeteksi: ${top.nama}`);
+  setHudText(`AR aktif • ${top.nama}`);
+  hideInstruction();
   btn.href = top.detailUrl;
   setDockVisible(true);
   btn.style.display = "inline-flex";
@@ -461,6 +522,7 @@ function setMarkerFound(id, nama, detailUrl) {
   }
   activeMarkers.set(id, { id, nama, detailUrl });
   updateActiveUI();
+  showToast("AR aktif");
   logDebug("markerFound", { id, nama });
 }
 
@@ -796,7 +858,12 @@ async function loadPlants() {
 
 async function main() {
   setScanState("loading");
-  setHudText("AR TOGA • Memuat data tanaman...");
+  setHudText("Membuka AR...");
+  setInstruction({
+    title: "Membuka AR...",
+    desc: "Tahan kamera tetap mengarah ke kartu.",
+    mode: "loading",
+  });
   try {
     const [result, availableMarkerIdsRaw] = await Promise.all([
       loadPlants(),
@@ -808,7 +875,12 @@ async function main() {
 
     if (!plants.length) {
       setScanState("error");
-      setHudText("AR TOGA • Tidak ada marker yang cocok dengan filter.");
+      setHudText("Kartu belum tersedia untuk AR.");
+      setInstruction({
+        title: "Kartu belum tersedia untuk AR",
+        desc: "Coba kartu lain atau periksa data tanaman.",
+        mode: "plain",
+      });
       logDebug("markerFilterEmpty", {
         ids: Array.from(FILTER_ONLY_IDS),
         batchSize: FILTER_BATCH_SIZE,
@@ -850,24 +922,46 @@ async function main() {
     setScanState("scanning");
     if (!registeredMarkers) {
       setScanState("error");
-      setHudText("AR TOGA • Tidak ada marker pattern yang cocok dengan data.");
+      setHudText("Kartu belum tersedia untuk AR.");
+      setInstruction({
+        title: "Kartu belum tersedia untuk AR",
+        desc: "Coba kartu lain atau periksa data tanaman.",
+        mode: "plain",
+      });
       return;
     }
 
-    setHudText(
-      skippedMarkers > 0
-        ? `AR TOGA • Siap. ${registeredMarkers} marker aktif, ${skippedMarkers} dilewati.`
-        : "AR TOGA • Siap. Arahkan kamera ke marker pattern."
-    );
+    setHudText("Tahan kamera ke kartu");
+    setInstruction({
+      title: "Tahan kamera ke kartu",
+      desc: "Objek AR akan muncul otomatis.",
+      mode: "ready",
+    });
+    if (skippedMarkers > 0) {
+      logDebug("markerSkippedSummary", {
+        registeredMarkers,
+        skippedMarkers,
+      });
+    }
     applyPreviewMode(plants);
   } catch (e) {
     console.error(e);
     setScanState("error");
     if (navigator.onLine === false) {
-      setHudText("AR TOGA • Offline. Gunakan data cache/lokal jika tersedia.");
+      setHudText("AR belum bisa dibuka.");
+      setInstruction({
+        title: "AR belum bisa dibuka",
+        desc: "Perangkat sedang offline. Coba lagi saat koneksi tersedia.",
+        mode: "plain",
+      });
       return;
     }
-    setHudText("AR TOGA • Gagal memuat data (cek koneksi/API/data lokal).");
+    setHudText("AR belum bisa dibuka.");
+    setInstruction({
+      title: "AR belum bisa dibuka",
+      desc: "Cek koneksi lalu coba lagi.",
+      mode: "plain",
+    });
   }
 }
 
