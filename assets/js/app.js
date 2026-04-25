@@ -68,14 +68,14 @@ function getParam(name) {
 
 function buildArHref(id) {
   const cleanId = String(id || "").trim();
-  if (!cleanId) return "ar.html";
+  if (!cleanId) return "scan-qr.html";
   return `ar.html?id=${encodeURIComponent(cleanId)}`;
 }
 
 function updateArEntryLinks(id) {
   const href = buildArHref(id);
   document
-    .querySelectorAll('a[href="ar.html"], a[href="./ar.html"], #btnOpenAr')
+    .querySelectorAll('a[href="ar.html"], a[href="./ar.html"], a[href="scan-qr.html"], a[href="./scan-qr.html"], #btnOpenAr')
     .forEach((link) => {
       link.setAttribute("href", href);
     });

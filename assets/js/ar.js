@@ -13,7 +13,7 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_KEY_AR_LIST = "toga:ar:plants:full:v1";
 const CACHE_KEY_AR_DETAIL_PREFIX = "toga:ar:plants:detail:v1:";
 const SEARCH_PARAMS = new URLSearchParams(window.location.search);
-const TARGET_ID = normalizeTargetId(
+const INITIAL_TARGET_ID = normalizeTargetId(
   SEARCH_PARAMS.get("id") || SEARCH_PARAMS.get("plant") || ""
 );
 
@@ -28,10 +28,11 @@ const PLACEHOLDER_SVG_DATA =
 
 const LOST_DEBOUNCE_MS = 350;
 const FOUND_EVENT_THROTTLE_MS = 220;
+const QR_SCAN_INTERVAL_MS = 260;
 const DEBUG_MODE = SEARCH_PARAMS.get("debug") === "1";
 const PREVIEW_TARGET = (SEARCH_PARAMS.get("preview") || "").trim();
-const FILTER_ONLY_IDS = new Set(
-  [TARGET_ID, SEARCH_PARAMS.get("ids") || "", SEARCH_PARAMS.get("markers") || ""]
+const BASE_FILTER_ONLY_IDS = new Set(
+  [SEARCH_PARAMS.get("ids") || "", SEARCH_PARAMS.get("markers") || ""]
     .join(",")
     .split(",")
     .map((value) => value.trim().toLowerCase())
@@ -39,7 +40,6 @@ const FILTER_ONLY_IDS = new Set(
 );
 const FILTER_BATCH_SIZE = Math.max(0, Number(SEARCH_PARAMS.get("batchSize")) || 0);
 const FILTER_BATCH_INDEX = Math.max(1, Number(SEARCH_PARAMS.get("batch")) || 1);
-const IS_TARGETED_AR = Boolean(TARGET_ID);
 
 const hud = document.getElementById("hud");
 const btnBack = document.getElementById("btnBack");
@@ -53,6 +53,7 @@ const arInstruction = document.getElementById("arInstruction");
 const arInstructionTitle = document.getElementById("arInstructionTitle");
 const arInstructionDesc = document.getElementById("arInstructionDesc");
 const arToast = document.getElementById("arToast");
+const qrCanvas = document.getElementById("qrCanvas");
 
 const debugPanel = document.getElementById("debugPanel");
 const debugSelect = document.getElementById("debugSelect");
@@ -71,6 +72,11 @@ const debugEvents = [];
 let scanState = "loading";
 let arDataSource = "remote";
 let toastTimer = 0;
+let currentTargetId = INITIAL_TARGET_ID;
+let qrScanActive = false;
+let qrScanFrameId = 0;
+let qrLastScanAt = 0;
+let loadRunId = 0;
 const IS_ANDROID = /android/i.test(window.navigator.userAgent || "");
 
 function normalizeTargetId(value) {
@@ -87,6 +93,26 @@ function normalizeTargetId(value) {
   } catch (_) {
     return raw;
   }
+}
+
+function isTargetedAr() {
+  return Boolean(currentTargetId);
+}
+
+function getEffectiveFilterOnlyIds() {
+  const ids = new Set(BASE_FILTER_ONLY_IDS);
+  if (currentTargetId) ids.add(normalizeMarkerId(currentTargetId));
+  return ids;
+}
+
+function shouldUseQrBootstrapFlow() {
+  return (
+    !isTargetedAr() &&
+    BASE_FILTER_ONLY_IDS.size === 0 &&
+    FILTER_BATCH_SIZE === 0 &&
+    !PREVIEW_TARGET &&
+    !DEBUG_MODE
+  );
 }
 
 if (btnDebugToggle && !DEBUG_MODE) {
@@ -286,8 +312,9 @@ function dataSourceHint(source) {
 
 function markerFilterHint() {
   if (!DEBUG_MODE) return "";
-  if (FILTER_ONLY_IDS.size > 0) {
-    return ` • filter ${Array.from(FILTER_ONLY_IDS).join(", ")}`;
+  const effectiveFilterIds = getEffectiveFilterOnlyIds();
+  if (effectiveFilterIds.size > 0) {
+    return ` • filter ${Array.from(effectiveFilterIds).join(", ")}`;
   }
   if (FILTER_BATCH_SIZE > 0) {
     return ` • batch ${FILTER_BATCH_INDEX}/${FILTER_BATCH_SIZE}`;
@@ -530,13 +557,23 @@ function updateActiveUI() {
   const top = activeMarkers.values().next().value;
   btnBack.style.display = "grid";
   if (!top) {
-    setScanState("scanning");
-    setHudText("Tahan kamera ke kartu");
-    setInstruction({
-      title: "Tahan kamera ke kartu",
-      desc: "Objek AR akan muncul otomatis.",
-      mode: "ready",
-    });
+    if (shouldUseQrBootstrapFlow()) {
+      setScanState("scan-qr");
+      setHudText("Scan kartu");
+      setInstruction({
+        title: "Arahkan kamera ke kode pada kartu",
+        desc: "Setelah terbaca, AR akan terbuka otomatis.",
+        mode: "ready",
+      });
+    } else {
+      setScanState("scanning");
+      setHudText("Tahan kamera ke kartu");
+      setInstruction({
+        title: "Tahan kamera ke kartu",
+        desc: "Objek AR akan muncul otomatis.",
+        mode: "ready",
+      });
+    }
     setDockVisible(false);
     btn.style.display = "none";
     btn.href = "#";
@@ -739,9 +776,12 @@ async function loadAvailableMarkerIds() {
 
 function filterMarkerIds(availableMarkerIds) {
   const ids = Array.from(availableMarkerIds).sort((a, b) => a.localeCompare(b));
+  const effectiveFilterIds = getEffectiveFilterOnlyIds();
 
-  if (FILTER_ONLY_IDS.size > 0) {
-    return new Set(ids.filter((id) => FILTER_ONLY_IDS.has(normalizeMarkerId(id))));
+  if (effectiveFilterIds.size > 0) {
+    return new Set(
+      ids.filter((id) => effectiveFilterIds.has(normalizeMarkerId(id)))
+    );
   }
 
   if (FILTER_BATCH_SIZE > 0) {
@@ -767,6 +807,157 @@ function hasMarkerId(markerIds, id) {
     if (normalizeMarkerId(markerId) === normalizedId) return true;
   }
   return false;
+}
+
+function getArVideoElement() {
+  return (
+    document.querySelector("#arjs-video") ||
+    document.querySelector("video")
+  );
+}
+
+function stopQrScanLoop() {
+  qrScanActive = false;
+  if (qrScanFrameId) {
+    window.cancelAnimationFrame(qrScanFrameId);
+    qrScanFrameId = 0;
+  }
+}
+
+function extractTargetIdFromQrText(value) {
+  return normalizeTargetId(value);
+}
+
+function updateArUrl(targetId) {
+  const nextId = normalizeTargetId(targetId);
+  const url = new URL(window.location.href);
+  if (nextId) {
+    url.searchParams.set("id", nextId);
+  } else {
+    url.searchParams.delete("id");
+  }
+  try {
+    window.history.replaceState({}, "", url.toString());
+  } catch (_) {}
+}
+
+function resetActiveState() {
+  for (const id of lostTimers.keys()) {
+    clearLostTimer(id);
+  }
+  activeMarkers.clear();
+  markerLastFoundAt.clear();
+  plantById.clear();
+  root.replaceChildren();
+  setDockVisible(false);
+  btn.style.display = "none";
+  btn.href = "#";
+}
+
+async function startArForTarget(targetId) {
+  const normalizedId = normalizeTargetId(targetId);
+  if (!normalizedId) return false;
+
+  stopQrScanLoop();
+  currentTargetId = normalizedId;
+  updateArUrl(normalizedId);
+  resetActiveState();
+  setScanState("loading-target");
+  setHudText("Kode berhasil dibaca");
+  setInstruction({
+    title: "Kode berhasil dibaca",
+    desc: "Membuka AR...",
+    mode: "success",
+  });
+  await new Promise((resolve) => window.setTimeout(resolve, 280));
+  await main(normalizedId);
+  return true;
+}
+
+function scanQrFrame(now) {
+  if (!qrScanActive) return;
+
+  if (now - qrLastScanAt < QR_SCAN_INTERVAL_MS) {
+    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
+    return;
+  }
+  qrLastScanAt = now;
+
+  const videoEl = getArVideoElement();
+  if (
+    !videoEl ||
+    videoEl.readyState < 2 ||
+    !videoEl.videoWidth ||
+    !videoEl.videoHeight ||
+    !qrCanvas ||
+    typeof window.jsQR !== "function"
+  ) {
+    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
+    return;
+  }
+
+  const canvas = qrCanvas;
+  const width = Math.max(2, Math.round(videoEl.videoWidth));
+  const height = Math.max(2, Math.round(videoEl.videoHeight));
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== height) canvas.height = height;
+
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
+    return;
+  }
+
+  ctx.drawImage(videoEl, 0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const result = window.jsQR(imageData.data, width, height, {
+    inversionAttempts: "dontInvert",
+  });
+  if (!result?.data) {
+    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
+    return;
+  }
+
+  const scannedId = extractTargetIdFromQrText(result.data);
+  if (!scannedId) {
+    showToast("Kode belum dikenali");
+    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
+    return;
+  }
+
+  logDebug("qrDetected", { raw: result.data, id: scannedId });
+  startArForTarget(scannedId).catch((error) => {
+    console.error(error);
+    showToast("Gagal membuka AR");
+    qrScanActive = true;
+    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
+  });
+}
+
+function startQrScanLoop() {
+  if (!shouldUseQrBootstrapFlow() || qrScanActive) return;
+
+  if (typeof window.jsQR !== "function") {
+    setScanState("error");
+    setHudText("Scan kartu belum tersedia.");
+    setInstruction({
+      title: "Scan kartu belum tersedia",
+      desc: "Buka halaman ini dengan ?id=tanaman atau gunakan browser yang memuat scanner.",
+      mode: "plain",
+    });
+    return;
+  }
+
+  qrLastScanAt = 0;
+  qrScanActive = true;
+  setScanState("scan-qr");
+  setHudText("Scan kartu");
+  setInstruction({
+    title: "Arahkan kamera ke kode pada kartu",
+    desc: "Setelah terbaca, AR akan terbuka otomatis.",
+    mode: "ready",
+  });
+  qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
 }
 
 function setupDebugMode(plants) {
@@ -940,16 +1131,27 @@ async function loadTargetPlant(targetId) {
 }
 
 async function loadArPlants() {
-  if (IS_TARGETED_AR) return loadTargetPlant(TARGET_ID);
+  if (isTargetedAr()) return loadTargetPlant(currentTargetId);
   return loadPlants();
 }
 
-async function main() {
+async function main(targetId = currentTargetId) {
+  currentTargetId = normalizeTargetId(targetId || "");
+  const runId = ++loadRunId;
+
+  if (shouldUseQrBootstrapFlow()) {
+    window.location.replace("scan-qr.html");
+    return;
+  }
+
+  resetActiveState();
   setScanState("loading");
   setHudText("Membuka AR...");
   setInstruction({
     title: "Membuka AR...",
-    desc: "Tahan kamera tetap mengarah ke kartu.",
+    desc: isTargetedAr()
+      ? "Tahan kamera tetap mengarah ke kartu."
+      : "Menyiapkan kamera untuk AR.",
     mode: "loading",
   });
   try {
@@ -957,8 +1159,9 @@ async function main() {
       loadArPlants(),
       loadAvailableMarkerIds(),
     ]);
+    if (runId !== loadRunId) return;
     const availableMarkerIds = filterMarkerIds(availableMarkerIdsRaw);
-    const plants = IS_TARGETED_AR
+    const plants = isTargetedAr()
       ? filterPlantsByMarkerIds(result.plants.slice(0, 1), availableMarkerIds)
       : filterPlantsByMarkerIds(result.plants, availableMarkerIds);
     arDataSource = result.source || "remote";
@@ -972,7 +1175,7 @@ async function main() {
         mode: "plain",
       });
       logDebug("markerFilterEmpty", {
-        ids: Array.from(FILTER_ONLY_IDS),
+        ids: Array.from(getEffectiveFilterOnlyIds()),
         batchSize: FILTER_BATCH_SIZE,
         batch: FILTER_BATCH_INDEX,
       });

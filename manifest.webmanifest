@@ -52,7 +52,7 @@
     {
       "name": "Mode AR",
       "short_name": "AR",
-      "url": "./ar.html",
+      "url": "./scan-qr.html",
       "icons": [
         {
           "src": "assets/icons/shortcut.png",

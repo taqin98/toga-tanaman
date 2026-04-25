@@ -131,6 +131,14 @@ a-scene,
   touch-action: none;
 }
 
+.qr-canvas {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .ar-overlay {
   position: fixed;
   inset: 0;
