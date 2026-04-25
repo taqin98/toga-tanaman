@@ -44,6 +44,7 @@ const FILTER_BATCH_INDEX = Math.max(1, Number(SEARCH_PARAMS.get("batch")) || 1);
 const hud = document.getElementById("hud");
 const btnBack = document.getElementById("btnBack");
 const btn = document.getElementById("btnDetail");
+const btnRescan = document.getElementById("btnRescan");
 const arDock = document.getElementById("arDock");
 const btnDebugToggle = document.getElementById("btnDebugToggle");
 const scanFrame = document.querySelector(".ar-scan-frame");
@@ -273,7 +274,7 @@ function setScanFrameVisible(visible) {
 
 function setDockVisible(visible) {
   if (!arDock) return;
-  arDock.style.display = visible ? "block" : "none";
+  arDock.style.display = visible ? "flex" : "none";
 }
 
 function setInstruction({ title, desc, mode = "loading", visible = true }) {
@@ -576,6 +577,7 @@ function updateActiveUI() {
     }
     setDockVisible(false);
     btn.style.display = "none";
+    if (btnRescan) btnRescan.style.display = "none";
     btn.href = "#";
     setScanFrameVisible(true);
     return;
@@ -587,6 +589,7 @@ function updateActiveUI() {
   btn.href = top.detailUrl;
   setDockVisible(true);
   btn.style.display = "inline-flex";
+  if (btnRescan) btnRescan.style.display = "inline-flex";
   setScanFrameVisible(false);
 }
 

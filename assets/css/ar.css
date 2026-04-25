@@ -392,6 +392,7 @@ a-scene,
   bottom: calc(12px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   display: none;
+  gap: 8px;
   border-radius: 999px;
   padding: 8px;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.93), rgba(241, 250, 239, 0.84));
@@ -399,6 +400,8 @@ a-scene,
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.24);
   backdrop-filter: blur(14px);
   pointer-events: auto;
+  width: max-content;
+  max-width: calc(100vw - 24px);
 }
 
 .btn {
@@ -426,9 +429,9 @@ a-scene,
 }
 
 .btn-detail {
-  min-width: 180px;
+  min-width: 130px;
   height: 52px;
-  margin: 0 auto;
+  margin: 0;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
