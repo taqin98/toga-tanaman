@@ -105,7 +105,7 @@ async function startCamera() {
   }
 }
 
-function scanQrFrame(now) {
+async function scanQrFrame(now) {
   if (!qrScanActive) return;
 
   if (now - lastScanAt < 250) {
@@ -141,19 +141,68 @@ function scanQrFrame(now) {
   }
 
   ctx.drawImage(video, 0, 0, width, height);
-  const imageData = ctx.getImageData(0, 0, width, height);
-  
-  // attemptBoth makes scanning much better in shadows or inverted colors
-  const result = window.jsQR(imageData.data, width, height, {
-    inversionAttempts: "attemptBoth",
-  });
 
-  if (!result?.data) {
+  let qrText = null;
+
+  // 1. Try Native BarcodeDetector (Extremely fast, handles borders well)
+  if ("BarcodeDetector" in window) {
+    try {
+      if (!window.qrDetector) {
+        window.qrDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
+      }
+      const barcodes = await window.qrDetector.detect(canvas);
+      if (barcodes && barcodes.length > 0) {
+        qrText = barcodes[0].rawValue;
+      }
+    } catch (e) {
+      console.warn("BarcodeDetector error", e);
+    }
+  }
+
+  // 2. Fallback to jsQR
+  if (!qrText && window.jsQR) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    let result = window.jsQR(imageData.data, width, height, {
+      inversionAttempts: "attemptBoth",
+    });
+
+    // 3. Fallback for AR Markers! 
+    // AR markers have thick black borders that confuse jsQR because they eat the "quiet zone".
+    // We crop the center 60% to strip away the outer black border.
+    if (!result) {
+      const cropW = Math.floor(width * 0.6);
+      const cropH = Math.floor(height * 0.6);
+      const cropX = Math.floor((width - cropW) / 2);
+      const cropY = Math.floor((height - cropH) / 2);
+      const croppedData = ctx.getImageData(cropX, cropY, cropW, cropH);
+      result = window.jsQR(croppedData.data, cropW, cropH, {
+        inversionAttempts: "attemptBoth",
+      });
+    }
+
+    // 4. Try tighter crop (Center 40%) just in case
+    if (!result) {
+      const cropW = Math.floor(width * 0.4);
+      const cropH = Math.floor(height * 0.4);
+      const cropX = Math.floor((width - cropW) / 2);
+      const cropY = Math.floor((height - cropH) / 2);
+      const croppedData = ctx.getImageData(cropX, cropY, cropW, cropH);
+      result = window.jsQR(croppedData.data, cropW, cropH, {
+        inversionAttempts: "dontInvert",
+      });
+    }
+
+    if (result) {
+      qrText = result.data;
+    }
+  }
+
+  if (!qrText) {
     scanFrameId = window.requestAnimationFrame(scanQrFrame);
     return;
   }
 
-  const scannedId = normalizeTargetId(result.data);
+  const scannedId = normalizeTargetId(qrText);
   if (!scannedId) {
     showToast("Kode belum dikenali");
     scanFrameId = window.requestAnimationFrame(scanQrFrame);
