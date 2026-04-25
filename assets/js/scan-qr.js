@@ -13,46 +13,6 @@ let qrScanActive = false;
 let toastTimer = 0;
 let jsQrStrategy = 0;
 
-let qrWorker;
-try {
-  qrWorker = new window.Worker("assets/js/qr-worker.js");
-} catch (e) {
-  console.warn("Web Worker failed to initialize", e);
-}
-let isWorkerBusy = false;
-
-if (qrWorker) {
-  qrWorker.onmessage = function (e) {
-    isWorkerBusy = false;
-    if (!qrScanActive) return;
-    if (e.data.result) {
-      processScanResult(e.data.result);
-    }
-  };
-}
-
-function processScanResult(qrText) {
-  const scannedId = normalizeTargetId(qrText);
-  if (!scannedId) {
-    showToast("Kode belum dikenali");
-    return;
-  }
-
-  qrScanActive = false;
-  
-  if (hud) hud.textContent = "Kode berhasil dibaca";
-  if (arInstruction) {
-    arInstruction.classList.remove("is-hidden");
-    arInstruction.classList.add("is-success");
-    if (arInstructionTitle) arInstructionTitle.textContent = "Kode berhasil dibaca";
-    if (arInstructionDesc) arInstructionDesc.textContent = "Membuka AR...";
-  }
-
-  window.setTimeout(() => {
-    window.location.href = `ar.html?id=${encodeURIComponent(scannedId)}`;
-  }, 300);
-}
-
 function showToast(message) {
   if (!arToast) return;
   window.clearTimeout(toastTimer);
@@ -149,8 +109,7 @@ async function startCamera() {
 async function scanQrFrame(now) {
   if (!qrScanActive) return;
 
-  // Faster frame loop since worker handles heavy lifting
-  if (now - lastScanAt < 100) {
+  if (now - lastScanAt < 250) {
     scanFrameId = window.requestAnimationFrame(scanQrFrame);
     return;
   }
@@ -165,8 +124,8 @@ async function scanQrFrame(now) {
   let width = Math.max(2, Math.round(video.videoWidth));
   let height = Math.max(2, Math.round(video.videoHeight));
   
-  // Lowered maxSize to 800 for significantly faster imageData processing on old devices
-  const maxSize = 800;
+  // Use a reasonable size that preserves QR details without crashing memory
+  const maxSize = 1280;
   if (width > maxSize || height > maxSize) {
     const ratio = Math.min(maxSize / width, maxSize / height);
     width = Math.round(width * ratio);
@@ -201,31 +160,57 @@ async function scanQrFrame(now) {
     }
   }
 
-  if (qrText) {
-    processScanResult(qrText);
-    return;
-  }
+  // 2. Fallback to jsQR (Rotating Strategy per Frame to prevent UI Freeze)
+  if (!qrText && window.jsQR) {
+    let cropRatio = 1.0;
+    if (jsQrStrategy === 1) cropRatio = 0.6; // Strip AR marker outer border
+    else if (jsQrStrategy === 2) cropRatio = 0.4; // Tighter crop
 
-  // 2. Offload jsQR to Web Worker if native failed
-  if (qrWorker && !isWorkerBusy) {
-    const imageData = ctx.getImageData(0, 0, width, height);
-    isWorkerBusy = true;
-    qrWorker.postMessage(
-      { buffer: imageData.data.buffer, width, height },
-      [imageData.data.buffer] // Zero-copy transfer for max performance
-    );
-  } else if (!qrWorker) {
-    // Fallback if worker completely failed to load
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const result = window.jsQR && window.jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+    const cropW = Math.floor(width * cropRatio);
+    const cropH = Math.floor(height * cropRatio);
+    const cropX = Math.floor((width - cropW) / 2);
+    const cropY = Math.floor((height - cropH) / 2);
+    const croppedData = ctx.getImageData(cropX, cropY, cropW, cropH);
+    
+    // Only use attemptBoth on full image strategy 3, keep others fast
+    const inversion = (jsQrStrategy === 3) ? "attemptBoth" : "dontInvert";
+
+    const result = window.jsQR(croppedData.data, cropW, cropH, {
+      inversionAttempts: inversion,
+    });
+
     if (result && result.data) {
-      processScanResult(result.data);
-      return;
+      qrText = result.data;
+    } else {
+      jsQrStrategy = (jsQrStrategy + 1) % 4;
     }
   }
 
-  // Continue scanning loop immediately (UI never freezes)
-  scanFrameId = window.requestAnimationFrame(scanQrFrame);
+  if (!qrText) {
+    scanFrameId = window.requestAnimationFrame(scanQrFrame);
+    return;
+  }
+
+  const scannedId = normalizeTargetId(qrText);
+  if (!scannedId) {
+    showToast("Kode belum dikenali");
+    scanFrameId = window.requestAnimationFrame(scanQrFrame);
+    return;
+  }
+
+  qrScanActive = false;
+  
+  if (hud) hud.textContent = "Kode berhasil dibaca";
+  if (arInstruction) {
+    arInstruction.classList.remove("is-hidden");
+    arInstruction.classList.add("is-success");
+    if (arInstructionTitle) arInstructionTitle.textContent = "Kode berhasil dibaca";
+    if (arInstructionDesc) arInstructionDesc.textContent = "Membuka AR...";
+  }
+
+  window.setTimeout(() => {
+    window.location.href = `ar.html?id=${encodeURIComponent(scannedId)}`;
+  }, 300);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
