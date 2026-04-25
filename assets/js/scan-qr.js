@@ -49,16 +49,13 @@ async function startCamera() {
   video.style.zIndex = "-1";
   video.setAttribute("playsinline", "true");
   video.setAttribute("webkit-playsinline", "true");
+  video.setAttribute("autoplay", "true");
+  video.setAttribute("muted", "true");
+  video.muted = true;
   document.body.appendChild(video);
 
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment",
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      }
-    });
+  const startStream = async (constraints) => {
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     
     // Attempt to apply advanced constraints for continuous focus if supported
     try {
@@ -82,20 +79,26 @@ async function startCamera() {
     
     if (hud) hud.textContent = "Scan kartu";
     if (arInstruction) arInstruction.classList.add("is-hidden");
+  };
+
+  try {
+    // Request highest possible resolution to make QR readable from distance
+    await startStream({
+      video: {
+        facingMode: "environment",
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      }
+    });
   } catch (err) {
-    console.error("Camera error:", err);
+    console.error("High-res camera error:", err);
     // Fallback if high res fails
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      await startStream({
         video: { facingMode: "environment" }
       });
-      video.srcObject = stream;
-      await video.play();
-      qrScanActive = true;
-      requestAnimationFrame(scanQrFrame);
-      if (hud) hud.textContent = "Scan kartu";
-      if (arInstruction) arInstruction.classList.add("is-hidden");
     } catch (fallbackErr) {
+      console.error("Fallback camera error:", fallbackErr);
       if (hud) hud.textContent = "Kamera tidak tersedia";
       showToast("Gagal mengakses kamera");
     }
@@ -120,8 +123,8 @@ function scanQrFrame(now) {
   let width = Math.max(2, Math.round(video.videoWidth));
   let height = Math.max(2, Math.round(video.videoHeight));
   
-  // Scale down to prevent freezing on high-res camera streams
-  const maxSize = 640;
+  // Use a reasonable size that preserves QR details without crashing memory
+  const maxSize = 1280;
   if (width > maxSize || height > maxSize) {
     const ratio = Math.min(maxSize / width, maxSize / height);
     width = Math.round(width * ratio);
@@ -139,8 +142,10 @@ function scanQrFrame(now) {
 
   ctx.drawImage(video, 0, 0, width, height);
   const imageData = ctx.getImageData(0, 0, width, height);
+  
+  // attemptBoth makes scanning much better in shadows or inverted colors
   const result = window.jsQR(imageData.data, width, height, {
-    inversionAttempts: "dontInvert",
+    inversionAttempts: "attemptBoth",
   });
 
   if (!result?.data) {
