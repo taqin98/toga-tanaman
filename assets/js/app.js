@@ -66,6 +66,21 @@ function getParam(name) {
   return u.searchParams.get(name);
 }
 
+function buildArHref(id) {
+  const cleanId = String(id || "").trim();
+  if (!cleanId) return "ar.html";
+  return `ar.html?id=${encodeURIComponent(cleanId)}`;
+}
+
+function updateArEntryLinks(id) {
+  const href = buildArHref(id);
+  document
+    .querySelectorAll('a[href="ar.html"], a[href="./ar.html"], #btnOpenAr')
+    .forEach((link) => {
+      link.setAttribute("href", href);
+    });
+}
+
 function toList(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
 
@@ -1043,6 +1058,7 @@ async function main() {
     setDataSourceNotice(listResult.source);
     const byId = new Map(plants.map((item) => [item.id, item]));
     const id = getParam("id");
+    updateArEntryLinks(id);
 
     if (!id) {
       if (plants.length === 0) throw new Error("Data tanaman kosong");
@@ -1071,6 +1087,7 @@ async function main() {
     setDataSourceNotice(detailResult.source);
     if (!plant) throw new Error("Tanaman tidak ditemukan");
 
+    updateArEntryLinks(plant.id || id);
     renderDetail(plant);
     show("stateDetail");
 

@@ -11,6 +11,7 @@ const MARKER_MANIFEST_URL = `markers/manifest.json?v=${encodeURIComponent(MARKER
 const FETCH_TIMEOUT_MS = 12000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_KEY_AR_LIST = "toga:ar:plants:full:v1";
+const CACHE_KEY_AR_DETAIL_PREFIX = "toga:ar:plants:detail:v1:";
 const SEARCH_PARAMS = new URLSearchParams(window.location.search);
 const TARGET_ID = normalizeTargetId(
   SEARCH_PARAMS.get("id") || SEARCH_PARAMS.get("plant") || ""
@@ -38,6 +39,7 @@ const FILTER_ONLY_IDS = new Set(
 );
 const FILTER_BATCH_SIZE = Math.max(0, Number(SEARCH_PARAMS.get("batchSize")) || 0);
 const FILTER_BATCH_INDEX = Math.max(1, Number(SEARCH_PARAMS.get("batch")) || 1);
+const IS_TARGETED_AR = Boolean(TARGET_ID);
 
 const hud = document.getElementById("hud");
 const btnBack = document.getElementById("btnBack");
@@ -478,6 +480,45 @@ function writeCache(key, data) {
   } catch (_) {}
 }
 
+function normalizePlantList(data) {
+  if (Array.isArray(data)) return data.filter(Boolean);
+  if (Array.isArray(data?.data)) return data.data.filter(Boolean);
+  if (data && typeof data === "object") {
+    if ("id" in data || "nama" in data || "manfaat" in data) return [data];
+    return Object.values(data).filter(
+      (item) => item && typeof item === "object"
+    );
+  }
+  return [];
+}
+
+function normalizePlantDetail(data, targetId) {
+  const normalizedTarget = normalizeMarkerId(targetId);
+  const list = normalizePlantList(data);
+  if (list.length > 0) {
+    return (
+      list.find((item) => normalizeMarkerId(item?.id) === normalizedTarget) ||
+      null
+    );
+  }
+
+  if (data && typeof data === "object") {
+    const id = safeStr(data.id).trim();
+    if (!id || normalizeMarkerId(id) === normalizedTarget) return data;
+  }
+
+  return null;
+}
+
+function findPlantById(plants, targetId) {
+  const normalizedTarget = normalizeMarkerId(targetId);
+  return (
+    normalizePlantList(plants).find(
+      (plant) => normalizeMarkerId(plant?.id) === normalizedTarget
+    ) || null
+  );
+}
+
 function clearLostTimer(id) {
   const timer = lostTimers.get(id);
   if (!timer) return;
@@ -712,7 +753,20 @@ function filterMarkerIds(availableMarkerIds) {
 }
 
 function filterPlantsByMarkerIds(plants, markerIds) {
-  return plants.filter((plant) => markerIds.has(safeStr(plant.id).trim()));
+  const normalizedMarkerIds = new Set(
+    Array.from(markerIds).map((id) => normalizeMarkerId(id))
+  );
+  return plants.filter((plant) =>
+    normalizedMarkerIds.has(normalizeMarkerId(plant.id))
+  );
+}
+
+function hasMarkerId(markerIds, id) {
+  const normalizedId = normalizeMarkerId(id);
+  for (const markerId of markerIds) {
+    if (normalizeMarkerId(markerId) === normalizedId) return true;
+  }
+  return false;
 }
 
 function setupDebugMode(plants) {
@@ -819,16 +873,12 @@ function applyPreviewMode(plants) {
 
 async function loadPlants() {
   const cached = readCache(CACHE_KEY_AR_LIST);
-  const cachedPlants = Array.isArray(cached)
-    ? cached
-    : Object.values(cached || {});
+  const cachedPlants = normalizePlantList(cached);
   if (cachedPlants.length > 0) {
     // AR butuh field manfaat/cara/catatan, jadi ambil dataset full.
     fetchJSON(`${API_URL}`)
       .then((dataset) => {
-        const plants = Array.isArray(dataset)
-          ? dataset
-          : Object.values(dataset || {});
+        const plants = normalizePlantList(dataset);
         if (plants.length > 0) writeCache(CACHE_KEY_AR_LIST, plants);
       })
       .catch(() => {});
@@ -838,9 +888,7 @@ async function loadPlants() {
   // AR mode: ambil data full agar text manfaat bisa tampil.
   try {
     const dataset = await fetchJSON(`${API_URL}`);
-    const plants = Array.isArray(dataset)
-      ? dataset
-      : Object.values(dataset || {});
+    const plants = normalizePlantList(dataset);
     if (plants.length > 0) {
       writeCache(CACHE_KEY_AR_LIST, plants);
       return { plants, source: "remote" };
@@ -851,9 +899,49 @@ async function loadPlants() {
 
   const local = await fetchJSON(LOCAL_DATA_URL);
   return {
-    plants: Array.isArray(local) ? local : Object.values(local || {}),
+    plants: normalizePlantList(local),
     source: "local",
   };
+}
+
+async function loadTargetPlant(targetId) {
+  const cacheKey = `${CACHE_KEY_AR_DETAIL_PREFIX}${normalizeMarkerId(targetId)}`;
+  const cached = normalizePlantDetail(readCache(cacheKey), targetId);
+  if (cached) {
+    fetchJSON(`${API_URL}?id=${encodeURIComponent(targetId)}`)
+      .then((detail) => {
+        const plant = normalizePlantDetail(detail, targetId);
+        if (plant) writeCache(cacheKey, plant);
+      })
+      .catch(() => {});
+    return { plants: [cached], source: "cache" };
+  }
+
+  try {
+    const detail = await fetchJSON(`${API_URL}?id=${encodeURIComponent(targetId)}`);
+    const plant = normalizePlantDetail(detail, targetId);
+    if (plant) {
+      writeCache(cacheKey, plant);
+      return { plants: [plant], source: "remote" };
+    }
+  } catch (error) {
+    console.warn("Remote detail AR gagal, fallback cache/list lokal", error);
+  }
+
+  const cachedListPlant = findPlantById(readCache(CACHE_KEY_AR_LIST), targetId);
+  if (cachedListPlant) return { plants: [cachedListPlant], source: "cache" };
+
+  const local = await fetchJSON(LOCAL_DATA_URL);
+  const localPlant = findPlantById(local, targetId);
+  return {
+    plants: localPlant ? [localPlant] : [],
+    source: localPlant ? "local" : "empty",
+  };
+}
+
+async function loadArPlants() {
+  if (IS_TARGETED_AR) return loadTargetPlant(TARGET_ID);
+  return loadPlants();
 }
 
 async function main() {
@@ -866,11 +954,13 @@ async function main() {
   });
   try {
     const [result, availableMarkerIdsRaw] = await Promise.all([
-      loadPlants(),
+      loadArPlants(),
       loadAvailableMarkerIds(),
     ]);
     const availableMarkerIds = filterMarkerIds(availableMarkerIdsRaw);
-    const plants = filterPlantsByMarkerIds(result.plants, availableMarkerIds);
+    const plants = IS_TARGETED_AR
+      ? filterPlantsByMarkerIds(result.plants.slice(0, 1), availableMarkerIds)
+      : filterPlantsByMarkerIds(result.plants, availableMarkerIds);
     arDataSource = result.source || "remote";
 
     if (!plants.length) {
@@ -892,6 +982,7 @@ async function main() {
     let registeredMarkers = 0;
     let skippedMarkers = 0;
 
+    root.replaceChildren();
     plants.forEach((p) => {
       const id = safeStr(p.id).trim();
       if (id) {
@@ -902,7 +993,7 @@ async function main() {
         });
       }
 
-      if (!id || !availableMarkerIds.has(id)) {
+      if (!id || !hasMarkerId(availableMarkerIds, id)) {
         skippedMarkers += 1;
         logDebug("markerSkipped", {
           id,
