@@ -53,8 +53,28 @@ async function startCamera() {
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
+      video: {
+        facingMode: "environment",
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 },
+      }
     });
+    
+    // Attempt to apply advanced constraints for continuous focus if supported
+    try {
+      const track = stream.getVideoTracks()[0];
+      if (track && typeof track.getCapabilities === 'function') {
+        const caps = track.getCapabilities();
+        if (caps.focusMode && caps.focusMode.includes('continuous')) {
+          await track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }]
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to apply advanced focus constraint", e);
+    }
+
     video.srcObject = stream;
     await video.play();
     qrScanActive = true;
@@ -64,8 +84,21 @@ async function startCamera() {
     if (arInstruction) arInstruction.classList.add("is-hidden");
   } catch (err) {
     console.error("Camera error:", err);
-    if (hud) hud.textContent = "Kamera tidak tersedia";
-    showToast("Gagal mengakses kamera");
+    // Fallback if high res fails
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+      });
+      video.srcObject = stream;
+      await video.play();
+      qrScanActive = true;
+      requestAnimationFrame(scanQrFrame);
+      if (hud) hud.textContent = "Scan kartu";
+      if (arInstruction) arInstruction.classList.add("is-hidden");
+    } catch (fallbackErr) {
+      if (hud) hud.textContent = "Kamera tidak tersedia";
+      showToast("Gagal mengakses kamera");
+    }
   }
 }
 
@@ -98,7 +131,7 @@ function scanQrFrame(now) {
   ctx.drawImage(video, 0, 0, width, height);
   const imageData = ctx.getImageData(0, 0, width, height);
   const result = window.jsQR(imageData.data, width, height, {
-    inversionAttempts: "dontInvert",
+    inversionAttempts: "attemptBoth",
   });
 
   if (!result?.data) {

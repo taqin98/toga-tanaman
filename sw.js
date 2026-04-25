@@ -1,4 +1,4 @@
-const SW_VERSION = "toga-v13.6.1";
+const SW_VERSION = "toga-v13.6.2";
 
 const CACHE_NAMES = {
   appShell: `${SW_VERSION}-app-shell`,
