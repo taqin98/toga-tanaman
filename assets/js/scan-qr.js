@@ -55,8 +55,8 @@ async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
-        width: { ideal: 1920, min: 1280 },
-        height: { ideal: 1080, min: 720 },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       }
     });
     
@@ -117,8 +117,17 @@ function scanQrFrame(now) {
   }
 
   const canvas = qrCanvas;
-  const width = Math.max(2, Math.round(video.videoWidth));
-  const height = Math.max(2, Math.round(video.videoHeight));
+  let width = Math.max(2, Math.round(video.videoWidth));
+  let height = Math.max(2, Math.round(video.videoHeight));
+  
+  // Scale down to prevent freezing on high-res camera streams
+  const maxSize = 640;
+  if (width > maxSize || height > maxSize) {
+    const ratio = Math.min(maxSize / width, maxSize / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
 
@@ -131,7 +140,7 @@ function scanQrFrame(now) {
   ctx.drawImage(video, 0, 0, width, height);
   const imageData = ctx.getImageData(0, 0, width, height);
   const result = window.jsQR(imageData.data, width, height, {
-    inversionAttempts: "attemptBoth",
+    inversionAttempts: "dontInvert",
   });
 
   if (!result?.data) {
