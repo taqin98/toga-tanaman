@@ -567,10 +567,14 @@ function updateActiveUI() {
         mode: "ready",
       });
     } else {
+      let targetName = "";
+      if (currentTargetId && plantById.has(currentTargetId)) {
+        targetName = ` ${plantById.get(currentTargetId).nama}`;
+      }
       setScanState("scanning");
       setHudText("Tahan kamera ke kartu");
       setInstruction({
-        title: "Tahan kamera ke kartu",
+        title: `Tahan kamera ke kartu AR${targetName}`,
         desc: "Objek AR akan muncul otomatis.",
         mode: "ready",
       });
@@ -1228,9 +1232,13 @@ async function main(targetId = currentTargetId) {
       return;
     }
 
+    let targetName = "";
+    if (currentTargetId && plantById.has(currentTargetId)) {
+      targetName = ` ${plantById.get(currentTargetId).nama}`;
+    }
     setHudText("Tahan kamera ke kartu");
     setInstruction({
-      title: "Tahan kamera ke kartu",
+      title: `Tahan kamera ke kartu AR${targetName}`,
       desc: "Objek AR akan muncul otomatis.",
       mode: "ready",
     });

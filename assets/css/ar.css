@@ -222,7 +222,7 @@ a-scene,
 .ar-instruction {
   position: absolute;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(88px + env(safe-area-inset-bottom));
   width: min(calc(100vw - 28px), 380px);
   min-height: 62px;
   display: flex;
@@ -239,6 +239,7 @@ a-scene,
   opacity: 1;
   visibility: visible;
   transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s ease;
+  pointer-events: none;
 }
 
 .ar-instruction.is-hidden {
