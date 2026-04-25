@@ -28,7 +28,6 @@ const PLACEHOLDER_SVG_DATA =
 
 const LOST_DEBOUNCE_MS = 350;
 const FOUND_EVENT_THROTTLE_MS = 220;
-const QR_SCAN_INTERVAL_MS = 260;
 const DEBUG_MODE = SEARCH_PARAMS.get("debug") === "1";
 const PREVIEW_TARGET = (SEARCH_PARAMS.get("preview") || "").trim();
 const BASE_FILTER_ONLY_IDS = new Set(
@@ -54,7 +53,6 @@ const arInstruction = document.getElementById("arInstruction");
 const arInstructionTitle = document.getElementById("arInstructionTitle");
 const arInstructionDesc = document.getElementById("arInstructionDesc");
 const arToast = document.getElementById("arToast");
-const qrCanvas = document.getElementById("qrCanvas");
 
 const debugPanel = document.getElementById("debugPanel");
 const debugSelect = document.getElementById("debugSelect");
@@ -74,9 +72,6 @@ let scanState = "loading";
 let arDataSource = "remote";
 let toastTimer = 0;
 let currentTargetId = INITIAL_TARGET_ID;
-let qrScanActive = false;
-let qrScanFrameId = 0;
-let qrLastScanAt = 0;
 let loadRunId = 0;
 const IS_ANDROID = /android/i.test(window.navigator.userAgent || "");
 
@@ -106,7 +101,7 @@ function getEffectiveFilterOnlyIds() {
   return ids;
 }
 
-function shouldUseQrBootstrapFlow() {
+function shouldRedirectToQrScanner() {
   return (
     !isTargetedAr() &&
     BASE_FILTER_ONLY_IDS.size === 0 &&
@@ -558,27 +553,17 @@ function updateActiveUI() {
   const top = activeMarkers.values().next().value;
   btnBack.style.display = "grid";
   if (!top) {
-    if (shouldUseQrBootstrapFlow()) {
-      setScanState("scan-qr");
-      setHudText("Scan kartu");
-      setInstruction({
-        title: "Arahkan kamera ke kode pada kartu",
-        desc: "Setelah terbaca, AR akan terbuka otomatis.",
-        mode: "ready",
-      });
-    } else {
-      let targetName = "";
-      if (currentTargetId && plantById.has(currentTargetId)) {
-        targetName = ` ${plantById.get(currentTargetId).nama}`;
-      }
-      setScanState("scanning");
-      setHudText("Tahan kamera ke kartu");
-      setInstruction({
-        title: `Tahan kamera ke kartu AR${targetName}`,
-        desc: "Objek AR akan muncul otomatis.",
-        mode: "ready",
-      });
+    let targetName = "";
+    if (currentTargetId && plantById.has(currentTargetId)) {
+      targetName = ` ${plantById.get(currentTargetId).nama}`;
     }
+    setScanState("scanning");
+    setHudText("Tahan kamera ke kartu");
+    setInstruction({
+      title: `Tahan kamera ke kartu AR${targetName}`,
+      desc: "Objek AR akan muncul otomatis.",
+      mode: "ready",
+    });
     setDockVisible(true);
     btn.style.display = "none";
     if (btnRescan) btnRescan.style.display = "inline-flex";
@@ -816,38 +801,6 @@ function hasMarkerId(markerIds, id) {
   return false;
 }
 
-function getArVideoElement() {
-  return (
-    document.querySelector("#arjs-video") ||
-    document.querySelector("video")
-  );
-}
-
-function stopQrScanLoop() {
-  qrScanActive = false;
-  if (qrScanFrameId) {
-    window.cancelAnimationFrame(qrScanFrameId);
-    qrScanFrameId = 0;
-  }
-}
-
-function extractTargetIdFromQrText(value) {
-  return normalizeTargetId(value);
-}
-
-function updateArUrl(targetId) {
-  const nextId = normalizeTargetId(targetId);
-  const url = new URL(window.location.href);
-  if (nextId) {
-    url.searchParams.set("id", nextId);
-  } else {
-    url.searchParams.delete("id");
-  }
-  try {
-    window.history.replaceState({}, "", url.toString());
-  } catch (_) {}
-}
-
 function resetActiveState() {
   for (const id of lostTimers.keys()) {
     clearLostTimer(id);
@@ -859,112 +812,6 @@ function resetActiveState() {
   setDockVisible(false);
   btn.style.display = "none";
   btn.href = "#";
-}
-
-async function startArForTarget(targetId) {
-  const normalizedId = normalizeTargetId(targetId);
-  if (!normalizedId) return false;
-
-  stopQrScanLoop();
-  currentTargetId = normalizedId;
-  updateArUrl(normalizedId);
-  resetActiveState();
-  setScanState("loading-target");
-  setHudText("Kode berhasil dibaca");
-  setInstruction({
-    title: "Kode berhasil dibaca",
-    desc: "Membuka AR...",
-    mode: "success",
-  });
-  await new Promise((resolve) => window.setTimeout(resolve, 280));
-  await main(normalizedId);
-  return true;
-}
-
-function scanQrFrame(now) {
-  if (!qrScanActive) return;
-
-  if (now - qrLastScanAt < QR_SCAN_INTERVAL_MS) {
-    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
-    return;
-  }
-  qrLastScanAt = now;
-
-  const videoEl = getArVideoElement();
-  if (
-    !videoEl ||
-    videoEl.readyState < 2 ||
-    !videoEl.videoWidth ||
-    !videoEl.videoHeight ||
-    !qrCanvas ||
-    typeof window.jsQR !== "function"
-  ) {
-    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
-    return;
-  }
-
-  const canvas = qrCanvas;
-  const width = Math.max(2, Math.round(videoEl.videoWidth));
-  const height = Math.max(2, Math.round(videoEl.videoHeight));
-  if (canvas.width !== width) canvas.width = width;
-  if (canvas.height !== height) canvas.height = height;
-
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) {
-    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
-    return;
-  }
-
-  ctx.drawImage(videoEl, 0, 0, width, height);
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const result = window.jsQR(imageData.data, width, height, {
-    inversionAttempts: "dontInvert",
-  });
-  if (!result?.data) {
-    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
-    return;
-  }
-
-  const scannedId = extractTargetIdFromQrText(result.data);
-  if (!scannedId) {
-    showToast("Kode belum dikenali");
-    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
-    return;
-  }
-
-  logDebug("qrDetected", { raw: result.data, id: scannedId });
-  startArForTarget(scannedId).catch((error) => {
-    console.error(error);
-    showToast("Gagal membuka AR");
-    qrScanActive = true;
-    qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
-  });
-}
-
-function startQrScanLoop() {
-  if (!shouldUseQrBootstrapFlow() || qrScanActive) return;
-
-  if (typeof window.jsQR !== "function") {
-    setScanState("error");
-    setHudText("Scan kartu belum tersedia.");
-    setInstruction({
-      title: "Scan kartu belum tersedia",
-      desc: "Buka halaman ini dengan ?id=tanaman atau gunakan browser yang memuat scanner.",
-      mode: "plain",
-    });
-    return;
-  }
-
-  qrLastScanAt = 0;
-  qrScanActive = true;
-  setScanState("scan-qr");
-  setHudText("Scan kartu");
-  setInstruction({
-    title: "Arahkan kamera ke kode pada kartu",
-    desc: "Setelah terbaca, AR akan terbuka otomatis.",
-    mode: "ready",
-  });
-  qrScanFrameId = window.requestAnimationFrame(scanQrFrame);
 }
 
 function setupDebugMode(plants) {
@@ -1146,7 +993,7 @@ async function main(targetId = currentTargetId) {
   currentTargetId = normalizeTargetId(targetId || "");
   const runId = ++loadRunId;
 
-  if (shouldUseQrBootstrapFlow()) {
+  if (shouldRedirectToQrScanner()) {
     window.location.replace("scan-qr.html");
     return;
   }

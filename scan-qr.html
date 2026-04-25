@@ -89,13 +89,7 @@
             <path d="m15 6-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
-        <div class="hud" id="hud">Tahan kamera ke kartu AR</div>
-        <button class="ar-icon-btn" id="btnDebugToggle" type="button" aria-label="Buka panel debug">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M19.4 13.1V10.9l-1.8-.3a5.8 5.8 0 0 0-.5-1.2l1-1.5-1.6-1.6-1.5 1a5.8 5.8 0 0 0-1.2-.5l-.3-1.8h-2.2l-.3 1.8a5.8 5.8 0 0 0-1.2.5l-1.5-1-1.6 1.6 1 1.5a5.8 5.8 0 0 0-.5 1.2l-1.8.3v2.2l1.8.3a5.8 5.8 0 0 0 .5 1.2l-1 1.5 1.6 1.6 1.5-1a5.8 5.8 0 0 0 1.2.5l.3 1.8h2.2l.3-1.8a5.8 5.8 0 0 0 1.2-.5l1.5 1 1.6-1.6-1-1.5a5.8 5.8 0 0 0 .5-1.2l1.8-.3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="hud" id="hud">Scan kartu</div>
       </div>
 
       <div class="ar-scan-frame" aria-hidden="true">
@@ -115,49 +109,10 @@
         </span>
         <span class="ar-instruction__copy">
           <span class="ar-instruction__title" id="arInstructionTitle">Membuka AR...</span>
-          <span class="ar-instruction__desc" id="arInstructionDesc">Tahan kamera tetap mengarah ke kartu.</span>
+          <span class="ar-instruction__desc" id="arInstructionDesc">Arahkan kamera ke kode pada kartu.</span>
         </span>
       </div>
-
-      <div class="ar-dock" id="arDock">
-        <a class="btn btn-detail" id="btnDetail" href="#" target="_blank" rel="noopener noreferrer" aria-label="Buka detail tanaman">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M4.5 8A2.5 2.5 0 0 1 7 5.5h10A2.5 2.5 0 0 1 19.5 8v8A2.5 2.5 0 0 1 17 18.5H7A2.5 2.5 0 0 1 4.5 16V8Z" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M9 12h6M12 9v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          <span class="btn-detail-text">Detail Tanaman</span>
-        </a>
-      </div>
-
       <div class="ar-toast" id="arToast" role="status" aria-live="polite"></div>
-    </div>
-
-    <div class="debug-panel" id="debugPanel">
-      <p class="debug-title">DEBUG MODE • Simulasi marker</p>
-
-      <div class="debug-row">
-        <select id="debugSelect" class="debug-select"></select>
-      </div>
-
-      <div class="debug-row" style="margin-top: 8px">
-        <button id="debugFound" class="debug-btn" type="button">Found</button>
-        <button id="debugLost" class="debug-btn" type="button">Lost</button>
-        <button id="debugReset" class="debug-btn" type="button">Reset</button>
-      </div>
-
-      <div class="debug-row" style="margin-top: 8px">
-        <button id="debugExport" class="debug-btn" type="button">
-          Export JSON
-        </button>
-        <button id="debugClear" class="debug-btn" type="button">
-          Clear Log
-        </button>
-      </div>
-
-      <pre
-        id="debugLog"
-        style="margin-top:8px; max-height:180px; overflow:auto; background:rgba(0,0,0,0.45); padding:8px; border-radius:8px; font-size:12px;"
-      >[]</pre>
     </div>
 
     <canvas id="qrCanvas" class="qr-canvas" aria-hidden="true" style="display: none;"></canvas>
