@@ -11,6 +11,7 @@ let scanFrameId = 0;
 let lastScanAt = 0;
 let qrScanActive = false;
 let toastTimer = 0;
+let jsQrStrategy = 0;
 
 function showToast(message) {
   if (!arToast) return;
@@ -159,41 +160,29 @@ async function scanQrFrame(now) {
     }
   }
 
-  // 2. Fallback to jsQR
+  // 2. Fallback to jsQR (Rotating Strategy per Frame to prevent UI Freeze)
   if (!qrText && window.jsQR) {
-    const imageData = ctx.getImageData(0, 0, width, height);
-    let result = window.jsQR(imageData.data, width, height, {
-      inversionAttempts: "attemptBoth",
+    let cropRatio = 1.0;
+    if (jsQrStrategy === 1) cropRatio = 0.6; // Strip AR marker outer border
+    else if (jsQrStrategy === 2) cropRatio = 0.4; // Tighter crop
+
+    const cropW = Math.floor(width * cropRatio);
+    const cropH = Math.floor(height * cropRatio);
+    const cropX = Math.floor((width - cropW) / 2);
+    const cropY = Math.floor((height - cropH) / 2);
+    const croppedData = ctx.getImageData(cropX, cropY, cropW, cropH);
+    
+    // Only use attemptBoth on full image strategy 3, keep others fast
+    const inversion = (jsQrStrategy === 3) ? "attemptBoth" : "dontInvert";
+
+    const result = window.jsQR(croppedData.data, cropW, cropH, {
+      inversionAttempts: inversion,
     });
 
-    // 3. Fallback for AR Markers! 
-    // AR markers have thick black borders that confuse jsQR because they eat the "quiet zone".
-    // We crop the center 60% to strip away the outer black border.
-    if (!result) {
-      const cropW = Math.floor(width * 0.6);
-      const cropH = Math.floor(height * 0.6);
-      const cropX = Math.floor((width - cropW) / 2);
-      const cropY = Math.floor((height - cropH) / 2);
-      const croppedData = ctx.getImageData(cropX, cropY, cropW, cropH);
-      result = window.jsQR(croppedData.data, cropW, cropH, {
-        inversionAttempts: "attemptBoth",
-      });
-    }
-
-    // 4. Try tighter crop (Center 40%) just in case
-    if (!result) {
-      const cropW = Math.floor(width * 0.4);
-      const cropH = Math.floor(height * 0.4);
-      const cropX = Math.floor((width - cropW) / 2);
-      const cropY = Math.floor((height - cropH) / 2);
-      const croppedData = ctx.getImageData(cropX, cropY, cropW, cropH);
-      result = window.jsQR(croppedData.data, cropW, cropH, {
-        inversionAttempts: "dontInvert",
-      });
-    }
-
-    if (result) {
+    if (result && result.data) {
       qrText = result.data;
+    } else {
+      jsQrStrategy = (jsQrStrategy + 1) % 4;
     }
   }
 

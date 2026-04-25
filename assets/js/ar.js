@@ -579,9 +579,9 @@ function updateActiveUI() {
         mode: "ready",
       });
     }
-    setDockVisible(false);
+    setDockVisible(true);
     btn.style.display = "none";
-    if (btnRescan) btnRescan.style.display = "none";
+    if (btnRescan) btnRescan.style.display = "inline-flex";
     btn.href = "#";
     setScanFrameVisible(true);
     return;
