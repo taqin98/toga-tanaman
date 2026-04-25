@@ -95,6 +95,15 @@ function isTargetedAr() {
   return Boolean(currentTargetId);
 }
 
+function isArCatalogMode() {
+  return (
+    DEBUG_MODE ||
+    Boolean(PREVIEW_TARGET) ||
+    BASE_FILTER_ONLY_IDS.size > 0 ||
+    FILTER_BATCH_SIZE > 0
+  );
+}
+
 function getEffectiveFilterOnlyIds() {
   const ids = new Set(BASE_FILTER_ONLY_IDS);
   if (currentTargetId) ids.add(normalizeMarkerId(currentTargetId));
@@ -102,13 +111,7 @@ function getEffectiveFilterOnlyIds() {
 }
 
 function shouldRedirectToQrScanner() {
-  return (
-    !isTargetedAr() &&
-    BASE_FILTER_ONLY_IDS.size === 0 &&
-    FILTER_BATCH_SIZE === 0 &&
-    !PREVIEW_TARGET &&
-    !DEBUG_MODE
-  );
+  return !isTargetedAr() && !isArCatalogMode();
 }
 
 if (btnDebugToggle && !DEBUG_MODE) {
@@ -916,7 +919,7 @@ function applyPreviewMode(plants) {
   logDebug("previewActive", { id, nama });
 }
 
-async function loadPlants() {
+async function loadArCatalogPlants() {
   const cached = readCache(CACHE_KEY_AR_LIST);
   const cachedPlants = normalizePlantList(cached);
   if (cachedPlants.length > 0) {
@@ -984,9 +987,11 @@ async function loadTargetPlant(targetId) {
   };
 }
 
-async function loadArPlants() {
-  if (isTargetedAr()) return loadTargetPlant(currentTargetId);
-  return loadPlants();
+async function loadArPlants(loadMode) {
+  if (loadMode === "targeted") {
+    return loadTargetPlant(currentTargetId);
+  }
+  return loadArCatalogPlants();
 }
 
 async function main(targetId = currentTargetId) {
@@ -998,24 +1003,28 @@ async function main(targetId = currentTargetId) {
     return;
   }
 
+  // Normal flow: hasil scan QR membuka `ar.html?id=...`.
+  // Catalog mode dipakai hanya untuk debug/preview/filter marker.
+  const loadMode = isTargetedAr() ? "targeted" : "catalog";
+
   resetActiveState();
   setScanState("loading");
   setHudText("Membuka AR...");
   setInstruction({
     title: "Membuka AR...",
-    desc: isTargetedAr()
+    desc: loadMode === "targeted"
       ? "Tahan kamera tetap mengarah ke kartu."
       : "Menyiapkan kamera untuk AR.",
     mode: "loading",
   });
   try {
     const [result, availableMarkerIdsRaw] = await Promise.all([
-      loadArPlants(),
+      loadArPlants(loadMode),
       loadAvailableMarkerIds(),
     ]);
     if (runId !== loadRunId) return;
     const availableMarkerIds = filterMarkerIds(availableMarkerIdsRaw);
-    const plants = isTargetedAr()
+    const plants = loadMode === "targeted"
       ? filterPlantsByMarkerIds(result.plants.slice(0, 1), availableMarkerIds)
       : filterPlantsByMarkerIds(result.plants, availableMarkerIds);
     arDataSource = result.source || "remote";
