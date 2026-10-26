@@ -81,7 +81,7 @@
   function renderTopbar(root) {
     const options = {
       variant: String(root.dataset.topbarVariant || "default").trim() || "default",
-      title: String(root.dataset.topbarTitle || "").trim() || "TOGA RT 09",
+      title: String(root.dataset.topbarTitle || "").trim() || "TOGA RW 18",
       subtitle: String(root.dataset.topbarSubtitle || "").trim(),
       subtitleId: String(root.dataset.topbarSubtitleId || "").trim(),
       backHref: String(root.dataset.topbarBackHref || "index.html").trim() || "index.html",

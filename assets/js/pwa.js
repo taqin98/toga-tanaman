@@ -109,7 +109,7 @@
       splashEl.innerHTML = `
         <div class="pwa-launch-splash__inner">
           <img class="pwa-launch-splash__logo" src="assets/icons/icon-192.png" alt="Logo TOGA" />
-          <div class="pwa-launch-splash__title">TOGA RT 09</div>
+          <div class="pwa-launch-splash__title">TOGA RW 18</div>
           <div class="pwa-launch-splash__loading" aria-live="polite">
             <span class="pwa-launch-splash__spinner" aria-hidden="true"></span>
             <span>Memuat aplikasi...</span>

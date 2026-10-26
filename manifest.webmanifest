@@ -1,12 +1,15 @@
 {
-  "name": "TOGA RT 09",
+  "name": "TOGA RW 18",
   "short_name": "TOGA",
-  "description": "Sistem informasi tanaman obat keluarga RT 09 berbasis QR dan AR.",
+  "description": "Sistem informasi tanaman obat keluarga RW 18 berbasis QR dan AR.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "orientation": "portrait",
   "background_color": "#1f7a3e",
   "theme_color": "#1f7a3e",

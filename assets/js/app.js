@@ -979,7 +979,7 @@ function renderDetail(plant) {
 
   $("btnShare").onclick = async () => {
     const url = window.location.href;
-    const text = `Info TOGA: ${plant.nama} (RT 09)`;
+    const text = `Info TOGA: ${plant.nama} (RW 18)`;
 
     if (navigator.share) {
       try {

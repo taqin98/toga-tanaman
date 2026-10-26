@@ -1,4 +1,4 @@
-# Debugging Guide - TOGA RT 09
+# Debugging Guide - TOGA RW 18
 
 Dokumen ini berisi panduan debug untuk fitur utama proyek: data/API, tampilan list-detail, AR marker, dan PWA/service worker.
 

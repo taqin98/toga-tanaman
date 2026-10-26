@@ -22,7 +22,7 @@
     "Pelatihan",
     "Monitoring",
   ];
-  const lokasi = ["Kebun RT 09", "Posyandu", "Balai Warga", "Halaman Masjid"];
+  const lokasi = ["Kebun RW 18", "Posyandu", "Balai Warga", "Halaman Masjid"];
   const petugas = ["Ibu PKK", "Karang Taruna", "Kader Kesehatan", "Relawan RT"];
 
   const gridEl = document.getElementById("galleryGrid");

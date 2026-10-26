@@ -1,6 +1,6 @@
-# TOGA RT 09
+# TOGA RW 18
 
-Sistem informasi **Tanaman Obat Keluarga (TOGA)** berbasis web untuk RT 09.
+Sistem informasi **Tanaman Obat Keluarga (TOGA)** berbasis web untuk RW 18.
 
 Proyek ini mencakup:
 - katalog tanaman dan halaman detail berbasis `?id=`
